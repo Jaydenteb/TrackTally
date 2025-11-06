@@ -1,0 +1,7 @@
+node_modules
+.next
+*.log
+.env
+.env.local
+prisma/tracktally.db
+prisma/tracktally.db-journal

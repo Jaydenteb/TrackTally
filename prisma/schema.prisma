@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id                 String         @id @default(cuid())
+  email              String         @unique
+  displayName        String?
+  role               String         @default("teacher")
+  isSpecialist       Boolean        @default(false)
+  active             Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  homeroomClassrooms Classroom[]    @relation("Homeroom")
+  classes            TeacherClass[]
+}
+
+model Classroom {
+  id                String         @id @default(cuid())
+  name              String
+  code              String         @unique
+  archived          Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+  homeroomTeacherId String?
+  homeroomTeacher   Teacher?       @relation("Homeroom", fields: [homeroomTeacherId], references: [id])
+  students          Student[]
+  specialists       TeacherClass[]
+  incidents         Incident[]     @relation("ClassroomIncidents")
+}
+
+model TeacherClass {
+  id          String    @id @default(cuid())
+  teacherId   String
+  classroomId String
+  assignedAt  DateTime  @default(now())
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classroomId])
+}
+
+model Student {
+  id          String     @id @default(cuid())
+  studentId   String     @unique
+  firstName   String
+  lastName    String
+  guardians   String?
+  notes       String?
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id])
+  incidents   Incident[] @relation("StudentIncidents")
+}
+
+model Incident {
+  id           String     @id @default(cuid())
+  uuid         String     @unique
+  timestamp    DateTime   @default(now())
+  // Optional relation to Student by unique studentId; keeps write resilient if roster is missing
+  studentId    String?
+  student      Student?   @relation("StudentIncidents", fields: [studentId], references: [studentId])
+  studentName  String
+  // Optional relation to Classroom for filtering
+  classroomId  String?
+  classroom    Classroom? @relation("ClassroomIncidents", fields: [classroomId], references: [id])
+  classCode    String?
+  teacherEmail String
+  level        String
+  category     String
+  location     String
+  actionTaken  String?
+  note         String?
+  device       String?
+  createdAt    DateTime   @default(now())
+
+  @@index([timestamp])
+  @@index([teacherEmail])
+  @@index([classroomId])
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  performedBy String
+  meta        String?
+  createdAt   DateTime @default(now())
+}
