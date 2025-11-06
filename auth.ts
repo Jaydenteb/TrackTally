@@ -78,12 +78,18 @@ if (authConfigured) {
       },
     },
     callbacks: {
-      async signIn({ profile }) {
+            async signIn({ profile }) {
         const email = profile?.email?.toLowerCase();
         const hostedDomain = typeof profile?.hd === "string" ? profile.hd.toLowerCase() : undefined;
         if (!isAllowedDomain(email, hostedDomain)) {
           console.warn(
-            `Sign-in blocked for ${email ?? "unknown"} â€” domain mismatch (hd: ${hostedDomain ?? "none"}).`,
+            JSON.stringify({
+              event: "signInBlocked",
+              reason: "domainMismatch",
+              email: email ?? "unknown",
+              hostedDomain: hostedDomain ?? null,
+              allowedDomain: normalizedDomain ?? null,
+            }),
           );
           return false;
         }
@@ -91,12 +97,24 @@ if (authConfigured) {
 
         const teacher = await ensureTeacher(email, profile?.name);
         if (!teacher) {
-          console.warn(`Sign-in blocked for ${email} â€” not provisioned in TrackTally.`);
+          console.warn(
+            JSON.stringify({
+              event: "signInBlocked",
+              reason: "notProvisioned",
+              email,
+            }),
+          );
           return false;
         }
 
         if (!teacher.active) {
-          console.warn(`Sign-in blocked for ${email} â€” account inactive.`);
+          console.warn(
+            JSON.stringify({
+              event: "signInBlocked",
+              reason: "inactive",
+              email,
+            }),
+          );
           return false;
         }
 
@@ -175,6 +193,7 @@ if (authConfigured) {
 }
 
 export { handlers, authFn as auth, signInFn as signIn, signOutFn as signOut };
+
 
 
 
