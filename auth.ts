@@ -28,11 +28,12 @@ async function getTeacher(email: string) {
 
 async function ensureTeacher(email: string, displayName?: string | null) {
   let teacher = await getTeacher(email);
-  if (!teacher && bootstrapAdmins.has(email)) {
+  if (!teacher) {
+    const role = bootstrapAdmins.has(email) ? "admin" : "teacher";
     teacher = await prisma.teacher.create({
       data: {
         email,
-        role: "admin",
+        role,
         displayName: displayName ?? null,
       },
     });
@@ -82,7 +83,7 @@ if (authConfigured) {
         const hostedDomain = typeof profile?.hd === "string" ? profile.hd.toLowerCase() : undefined;
         if (!isAllowedDomain(email, hostedDomain)) {
           console.warn(
-            `Sign-in blocked for ${email ?? "unknown"} — domain mismatch (hd: ${hostedDomain ?? "none"}).`,
+            `Sign-in blocked for ${email ?? "unknown"} â€” domain mismatch (hd: ${hostedDomain ?? "none"}).`,
           );
           return false;
         }
@@ -90,12 +91,12 @@ if (authConfigured) {
 
         const teacher = await ensureTeacher(email, profile?.name);
         if (!teacher) {
-          console.warn(`Sign-in blocked for ${email} — not provisioned in TrackTally.`);
+          console.warn(`Sign-in blocked for ${email} â€” not provisioned in TrackTally.`);
           return false;
         }
 
         if (!teacher.active) {
-          console.warn(`Sign-in blocked for ${email} — account inactive.`);
+          console.warn(`Sign-in blocked for ${email} â€” account inactive.`);
           return false;
         }
 
@@ -174,6 +175,8 @@ if (authConfigured) {
 }
 
 export { handlers, authFn as auth, signInFn as signIn, signOutFn as signOut };
+
+
 
 
 
