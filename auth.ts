@@ -120,8 +120,8 @@ if (authConfigured) {
 
         return true;
       },
-      async jwt({ token, trigger }) {
-        const email = token.email?.toLowerCase();
+      async jwt({ token, trigger, session }) {
+        const email = token.email?.toLowerCase() ?? session?.user?.email?.toLowerCase();
         if (!email) return token;
 
         if (trigger !== "signIn" && token.role) {
@@ -193,6 +193,8 @@ if (authConfigured) {
 }
 
 export { handlers, authFn as auth, signInFn as signIn, signOutFn as signOut };
+
+
 
 
 
