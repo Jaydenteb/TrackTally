@@ -12,6 +12,51 @@ TrackTally is a Next.js 15 PWA that records classroom behaviour incidents direct
 - Optional SMTP notifications when incidents target students from another class (emails the homeroom teacher).
 - Incident audit log stored in the database (and still appended to Google Sheets) to enable analytics and reliable history.
 
+## Priority: Super Admin & Multi‑Tenant Auth
+
+We are preparing TrackTally for multiple schools and future individual licences. The immediate focus is enabling a Super Admin experience and multi‑tenant authentication while keeping mobile sign‑in excellent.
+
+- Deliverables
+  - Super Admin console (`/super-admin`) to manage organizations (schools), domains, seats/licences, and admins.
+  - Data model: `Organization`, `OrgDomain` (DNS‑verified), `OrgMember` (role: `super_admin`, `org_admin`, `teacher`), and `License` (plan, seats, status, dates).
+  - Domain verification flow: generate a DNS TXT token, poll/verify, then allow sign‑ins from that domain.
+  - Auth changes: NextAuth sign‑in checks allowed domains from `OrgDomain` instead of a single `ALLOWED_GOOGLE_DOMAIN` (kept as single‑tenant fallback).
+  - Mobile‑first Google sign‑in page (already in place) with clear domain messaging and fast path back to the logger.
+
+- Configuration (target state)
+  - `NEXTAUTH_URL` set per env (dev/staging/prod) to your public hostname.
+  - Google OAuth client with authorized redirect URIs for each env (see below). One GCP project is fine; create a distinct OAuth client for TrackTally to keep callbacks tidy.
+  - Optional SMTP (or Resend SMTP/API) for incident notifications remains unchanged.
+
+- Implementation phases
+  1) Schema: add `Organization`, `OrgDomain`, `OrgMember`, `License`; migrate DB; seed your first org.
+  2) Auth guard: load allowed domains at sign‑in; block non‑verified domains; keep `ALLOWED_GOOGLE_DOMAIN` honored when set.
+  3) Console: `/super-admin` UI for org CRUD, domain verification (TXT token), member roles, and seat counts.
+  4) Licensing: enforce seat limits (soft first), add basic audit events; Stripe/Billing later.
+
+- Acceptance
+  - Super Admin can add a school, provide a domain, verify via DNS TXT, invite admins, and see active users.
+  - Teachers from verified domains can sign in and reach `/teacher`; others are blocked with a clear message.
+
+### OAuth Redirect URIs (examples)
+
+Add these under your Google OAuth client for TrackTally (adjust hostnames you choose):
+
+- Dev: `http://localhost:3000/api/auth/callback/google`
+- Staging: `https://tracktally-staging.<your-domain>/api/auth/callback/google`
+- Prod: `https://tracktally.<your-domain>/api/auth/callback/google`
+
+Set `NEXTAUTH_URL` to the exact base URL of each environment.
+
+### Domain Strategy (suite of apps)
+
+You have two pragmatic paths:
+
+1) Short‑term (simple): run TrackTally at a subdomain of your existing brand, e.g. `tracktally.spelltally.com`. Give TrackTally its own OAuth client (within the same Google Cloud project) and its own `NEXTAUTH_URL`. This keeps cost/ops low and can migrate later.
+2) Long‑term (scales best): use a parent brand domain (e.g. `tally.education`) with product subdomains: `tracktally.tally.education`, `spelltally.tally.education`, and optionally `id.tally.education` for future cross‑app SSO. Each app keeps distinct OAuth clients and envs; the identity subdomain can unify sign‑in later.
+
+Recommendation: adopt option 1 now for speed; plan option 2 as you add more apps or need cross‑product SSO.
+
 ## Project structure
 
 ```

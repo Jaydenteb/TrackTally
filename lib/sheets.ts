@@ -23,7 +23,10 @@ function assertEnv() {
 
 function getAuthClient() {
   assertEnv();
-  const privateKey = SERVICE_ACCOUNT_PRIVATE_KEY!.replace(/\\n/g, "\n");
+  let privateKey = SERVICE_ACCOUNT_PRIVATE_KEY!;
+  if (privateKey.includes("\\n")) {
+    privateKey = privateKey.replace(/\\n/g, "\n");
+  }
 
   return new google.auth.JWT({
     email: SERVICE_ACCOUNT_EMAIL!,

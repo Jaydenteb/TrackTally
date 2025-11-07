@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 import { ClassManager } from "./ClassManager";
 import { TeacherManager } from "./TeacherManager";
 import { StudentManager } from "./StudentManager";
@@ -148,6 +149,25 @@ export function AdminDashboard({ domain }: Props) {
           >
             Teacher home
           </a>
+          <button
+            type="button"
+            onClick={() => {
+              void signOut({ callbackUrl: "/login" });
+            }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "0.65rem 1rem",
+              borderRadius: "12px",
+              border: "1px solid transparent",
+              background: "#e2e8f0",
+              color: "#0f172a",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
