@@ -2,7 +2,25 @@ import { auth } from "../../auth";
 import { redirect } from "next/navigation";
 import { AdminDashboard } from "../../components/admin/AdminDashboard";
 
-export default async function AdminPage() {
+type Props = {
+  searchParams?: {
+    impersonate?: string;
+  };
+};
+
+function sanitizeDomain(value?: string | null) {
+  if (!value) return null;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    return url.hostname.toLowerCase();
+  } catch {
+    return trimmed.replace(/^https?:\/\//, "").split("/")[0];
+  }
+}
+
+export default async function AdminPage({ searchParams }: Props) {
   const session = await auth();
   const allowedDomain = process.env.ALLOWED_GOOGLE_DOMAIN ?? "your approved domain";
 
@@ -10,9 +28,12 @@ export default async function AdminPage() {
     redirect("/login");
   }
 
-  if (session.user?.role !== "admin") {
+  if (session.user?.role !== "admin" && session.user?.role !== "superadmin") {
     redirect("/");
   }
+
+  const impersonatedDomain =
+    session.user?.role === "superadmin" ? sanitizeDomain(searchParams?.impersonate) : null;
 
   return (
     <main
@@ -24,7 +45,11 @@ export default async function AdminPage() {
         justifyContent: "center",
       }}
     >
-      <AdminDashboard domain={allowedDomain} />
+      <AdminDashboard
+        domain={allowedDomain}
+        impersonatedDomain={impersonatedDomain}
+        isSuperAdminView={session.user?.role === "superadmin"}
+      />
     </main>
   );
 }

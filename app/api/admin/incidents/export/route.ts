@@ -1,7 +1,19 @@
+import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../lib/admin-auth";
 import { prisma } from "../../../../../lib/prisma";
 import { recordAuditLog } from "../../../../../lib/settings";
+import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
+
+async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
+  const url = new URL(request.url);
+  const requestedDomain = url.searchParams.get("domain");
+  return resolveOrganizationIdForRequest({
+    session,
+    baseOrganizationId: baseOrgId,
+    requestedDomain: requestedDomain ?? undefined,
+  });
+}
 
 function toCsvValue(value: string | null | undefined) {
   if (value === null || value === undefined) return "";
@@ -13,10 +25,18 @@ function toCsvValue(value: string | null | undefined) {
 }
 
 export async function GET(request: Request) {
-  const { error, rateHeaders, session } = await requireAdmin(request);
+  const { error, rateHeaders, session, organizationId } = await requireAdmin(request);
   if (error) return error;
 
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session!, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
+
   const incidents = await prisma.incident.findMany({
+    where: { organizationId: targetOrgId },
     orderBy: { timestamp: "desc" },
     include: {
       classroom: { select: { name: true, code: true } },

@@ -47,6 +47,13 @@ type IncidentPayload = {
   timestamp?: string;
 };
 
+type IncidentOptionGroups = {
+  levels: string[];
+  categories: string[];
+  locations: string[];
+  actions: string[];
+};
+
 const LEVELS = ["Minor", "Major"] as const;
 const CATEGORIES = [
   "Disruption",
@@ -66,6 +73,13 @@ const ACTIONS = [
   "Parent contact",
   "Office referral",
 ];
+
+const DEFAULT_INCIDENT_OPTIONS: IncidentOptionGroups = {
+  levels: [...LEVELS],
+  categories: [...CATEGORIES],
+  locations: [...LOCATIONS],
+  actions: [...ACTIONS],
+};
 
 const STEP_ORDER = [
   "students",
@@ -126,7 +140,10 @@ export function LoggerApp({
   const [classSearch, setClassSearch] = useState("");
   const [quickFindTerm, setQuickFindTerm] = useState("");
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [incidentOptions, setIncidentOptions] =
+    useState<IncidentOptionGroups>(DEFAULT_INCIDENT_OPTIONS);
   const dictationRef = useRef<{ stop: () => void } | null>(null);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
   const stepPanelRef = useRef<HTMLDivElement | null>(null);
   const swipeOrigin = useRef<{ x: number; y: number } | null>(null);
   const role = session?.user?.role ?? "teacher";
@@ -170,12 +187,12 @@ export function LoggerApp({
   }, [status, loadRoster]);
 
   useEffect(() => {
-    if (
-      redirectAdmin &&
-      authConfigured &&
-      status === "authenticated" &&
-      role === "admin"
-    ) {
+    if (!redirectAdmin || !authConfigured || status !== "authenticated") return;
+    if (role === "superadmin") {
+      router.replace("/super-admin");
+      return;
+    }
+    if (role === "admin") {
       router.replace("/admin");
     }
   }, [authConfigured, redirectAdmin, role, router, status]);
@@ -183,6 +200,56 @@ export function LoggerApp({
   const handleSignIn = () => {
     void signIn(providerId, { callbackUrl: "/" });
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadOptions() {
+      try {
+        const response = await fetch("/api/options", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const data = payload?.data as IncidentOptionGroups | undefined;
+        if (!data) return;
+        const normalized: IncidentOptionGroups = {
+          levels:
+            Array.isArray(data.levels) && data.levels.length
+              ? data.levels
+              : DEFAULT_INCIDENT_OPTIONS.levels,
+          categories:
+            Array.isArray(data.categories) && data.categories.length
+              ? data.categories
+              : DEFAULT_INCIDENT_OPTIONS.categories,
+          locations:
+            Array.isArray(data.locations) && data.locations.length
+              ? data.locations
+              : DEFAULT_INCIDENT_OPTIONS.locations,
+          actions:
+            Array.isArray(data.actions) && data.actions.length
+              ? data.actions
+              : DEFAULT_INCIDENT_OPTIONS.actions,
+        };
+        if (!cancelled) {
+          setIncidentOptions(normalized);
+          setLevel((value) => (normalized.levels.includes(value) ? value : ""));
+          setCategory((value) =>
+            normalized.categories.includes(value) ? value : "",
+          );
+          setLocation((value) =>
+            normalized.locations.includes(value) ? value : "",
+          );
+          setActionTaken((value) =>
+            normalized.actions.includes(value) ? value : "",
+          );
+        }
+      } catch {
+        // ignore failures, defaults stay in place
+      }
+    }
+    void loadOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSignOut = () => {
     void signOut({ callbackUrl: "/login" });
@@ -405,6 +472,26 @@ export function LoggerApp({
       dictationRef.current?.stop();
       dictationRef.current = null;
       setIsRecording(false);
+      return;
+    }
+
+    const hasNativeDictation =
+      typeof window !== "undefined" && !!window.TrackTallyNative?.startDictation;
+    const isiOS =
+      typeof navigator !== "undefined" &&
+      /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!hasNativeDictation && isiOS) {
+      const textarea = noteRef.current;
+      if (textarea) {
+        textarea.focus();
+        try {
+          const length = textarea.value.length;
+          textarea.setSelectionRange(length, length);
+        } catch {
+          // ignore selection errors
+        }
+      }
+      setToast("Tap the keyboard mic to dictate.");
       return;
     }
 
@@ -744,7 +831,7 @@ export function LoggerApp({
           <section>
             <p className={styles.sectionTitle}>Level</p>
             <div className={styles.chipGroup}>
-              {LEVELS.map((option) => (
+              {incidentOptions.levels.map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -764,7 +851,7 @@ export function LoggerApp({
           <section>
             <p className={styles.sectionTitle}>Category</p>
             <div className={styles.chipGroup}>
-              {CATEGORIES.map((option) => (
+              {incidentOptions.categories.map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -784,7 +871,7 @@ export function LoggerApp({
           <section>
             <p className={styles.sectionTitle}>Location</p>
             <div className={styles.chipGroup}>
-              {LOCATIONS.map((option) => (
+              {incidentOptions.locations.map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -804,7 +891,7 @@ export function LoggerApp({
           <section>
             <p className={styles.sectionTitle}>Action taken</p>
             <div className={styles.chipGroup}>
-              {ACTIONS.map((option) => (
+              {incidentOptions.actions.map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -825,10 +912,13 @@ export function LoggerApp({
             <p className={styles.sectionTitle}>Note</p>
             <div className={styles.noteRow}>
               <textarea
+                ref={noteRef}
                 className={styles.textarea}
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 placeholder="Optional details"
+                autoCapitalize="sentences"
+                autoCorrect="on"
               />
               <button
                 type="button"
@@ -926,12 +1016,22 @@ export function LoggerApp({
       <div className={styles.card}>
         <div className={styles.userBar}>
           <span>
-            {role === "admin" ? "Admin" : "Teacher"} - {userEmail || "Unknown user"}
+            {role === "superadmin"
+              ? "Super Admin"
+              : role === "admin"
+                ? "Admin"
+                : "Teacher"}{" "}
+            - {userEmail || "Unknown user"}
           </span>
           <div style={{ display: "flex", gap: "0.6rem" }}>
-            {role === "admin" && (
+            {(role === "admin" || role === "superadmin") && (
               <a href="/admin" className={styles.userAction} style={{ textDecoration: "none" }}>
                 Admin Dashboard
+              </a>
+            )}
+            {role === "superadmin" && (
+              <a href="/super-admin" className={styles.userAction} style={{ textDecoration: "none" }}>
+                Super Admin
               </a>
             )}
             <button type="button" className={styles.userAction} onClick={handleSignOut}>

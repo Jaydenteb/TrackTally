@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
   shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
@@ -16,6 +17,8 @@ model Teacher {
   isSpecialist       Boolean        @default(false)
   active             Boolean        @default(true)
   createdAt          DateTime       @default(now())
+  organizationId     String?
+  organization       Organization?  @relation(fields: [organizationId], references: [id])
   homeroomClassrooms Classroom[]    @relation("Homeroom")
   classes            TeacherClass[]
 }
@@ -26,6 +29,8 @@ model Classroom {
   code              String         @unique
   archived          Boolean        @default(false)
   createdAt         DateTime       @default(now())
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id])
   homeroomTeacherId String?
   homeroomTeacher   Teacher?       @relation("Homeroom", fields: [homeroomTeacherId], references: [id])
   students          Student[]
@@ -56,6 +61,8 @@ model Student {
   updatedAt   DateTime   @updatedAt
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
   incidents   Incident[] @relation("StudentIncidents")
 }
 
@@ -79,6 +86,8 @@ model Incident {
   note         String?
   device       String?
   createdAt    DateTime   @default(now())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
 
   @@index([timestamp])
   @@index([teacherEmail])
@@ -97,4 +106,30 @@ model AuditLog {
   performedBy String
   meta        String?
   createdAt   DateTime @default(now())
+}
+
+model Organization {
+  id            String      @id @default(cuid())
+  name          String
+  domain        String      @unique
+  active        Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  teachers      Teacher[]
+  classrooms    Classroom[]
+  students      Student[]
+  incidents     Incident[]
+}
+
+model MobileAuthTicket {
+  id            String   @id @default(cuid())
+  state         String   @unique
+  transferToken String?  @unique
+  redirectPath  String   @default("/teacher")
+  sessionToken  String?
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([expiresAt])
 }

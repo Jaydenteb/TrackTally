@@ -26,7 +26,7 @@ export async function GET() {
     },
   });
 
-  if (!teacher) {
+  if (!teacher || !teacher.organizationId) {
     return NextResponse.json({ ok: false, error: "Not provisioned" }, { status: 403 });
   }
 
@@ -34,7 +34,7 @@ export async function GET() {
 
   if (teacher.role === "admin") {
     classrooms = await prisma.classroom.findMany({
-      where: { archived: false },
+      where: { archived: false, organizationId: teacher.organizationId },
       orderBy: { name: "asc" },
       include: {
         students: { where: { active: true }, orderBy: [{ lastName: "asc" }] },
@@ -47,7 +47,7 @@ export async function GET() {
     const classIds = Array.from(new Set([...specialistIds, ...homeroom]));
 
     classrooms = await prisma.classroom.findMany({
-      where: { id: { in: classIds }, archived: false },
+      where: { id: { in: classIds }, archived: false, organizationId: teacher.organizationId },
       orderBy: { name: "asc" },
       include: {
         students: { where: { active: true }, orderBy: [{ lastName: "asc" }] },

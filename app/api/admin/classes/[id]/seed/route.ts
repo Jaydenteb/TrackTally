@@ -1,6 +1,8 @@
+import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../../lib/admin-auth";
 import { prisma } from "../../../../../../lib/prisma";
+import { resolveOrganizationIdForRequest } from "../../../../../../lib/organizations";
 
 const SAMPLE_STUDENTS = [
   ["S9001", "Ava", "Johnson"],
@@ -17,9 +19,34 @@ const SAMPLE_STUDENTS = [
 
 type Params = { params: { id: string } };
 
+async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
+  const url = new URL(request.url);
+  const requestedDomain = url.searchParams.get("domain");
+  return resolveOrganizationIdForRequest({
+    session,
+    baseOrganizationId: baseOrgId,
+    requestedDomain: requestedDomain ?? undefined,
+  });
+}
+
 export async function POST(request: Request, { params }: Params) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
+
+  const classroomRecord = await prisma.classroom.findUnique({
+    where: { id: params.id },
+    select: { organizationId: true },
+  });
+  if (!classroomRecord || classroomRecord.organizationId !== targetOrgId) {
+    return NextResponse.json({ ok: false, error: "Classroom not found." }, { status: 404 });
+  }
 
   try {
     await prisma.$transaction(
@@ -31,12 +58,14 @@ export async function POST(request: Request, { params }: Params) {
             lastName,
             active: true,
             classroomId: params.id,
+            organizationId: targetOrgId,
           },
           create: {
             studentId,
             firstName,
             lastName,
             classroomId: params.id,
+            organizationId: targetOrgId,
           },
         }),
       ),

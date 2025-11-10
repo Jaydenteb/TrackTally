@@ -1,13 +1,40 @@
+import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../../lib/prisma";
 import { requireAdmin } from "../../../../../../lib/admin-auth";
 import { classroomSpecialistSchema } from "../../../../../../lib/validation";
+import { resolveOrganizationIdForRequest } from "../../../../../../lib/organizations";
 
 type Params = { params: { id: string } };
 
+async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
+  const url = new URL(request.url);
+  const requestedDomain = url.searchParams.get("domain");
+  return resolveOrganizationIdForRequest({
+    session,
+    baseOrganizationId: baseOrgId,
+    requestedDomain: requestedDomain ?? undefined,
+  });
+}
+
 export async function POST(request: Request, { params }: Params) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
+
+  const classroomRecord = await prisma.classroom.findUnique({
+    where: { id: params.id },
+    select: { organizationId: true },
+  });
+  if (!classroomRecord || classroomRecord.organizationId !== targetOrgId) {
+    return NextResponse.json({ ok: false, error: "Classroom not found." }, { status: 404 });
+  }
 
   let body: unknown;
   try {
@@ -27,6 +54,17 @@ export async function POST(request: Request, { params }: Params) {
   const teacherIds = parsed.data.teacherIds;
 
   try {
+    const validTeachers = await prisma.teacher.findMany({
+      where: { id: { in: teacherIds }, organizationId: targetOrgId },
+      select: { id: true },
+    });
+    if (validTeachers.length !== teacherIds.length) {
+      return NextResponse.json(
+        { ok: false, error: "One or more teachers not found in this organization." },
+        { status: 404 },
+      );
+    }
+
     await prisma.teacherClass.deleteMany({ where: { classroomId: params.id } });
 
     if (teacherIds.length > 0) {
