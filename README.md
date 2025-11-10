@@ -11,6 +11,8 @@ TrackTally is a Next.js 15 PWA that records classroom behaviour incidents direct
 - Service worker PWA shell (disabled in dev to avoid stale caches) and `/api/health` uptime check.
 - Optional SMTP notifications when incidents target students from another class (emails the homeroom teacher).
 - Incident audit log stored in the database (and still appended to Google Sheets) to enable analytics and reliable history.
+- Customisable incident options per school (levels, categories, locations, actions) managed by admins and overseen by a global Super Admin.
+- Multi-tenant isolation: each school is backed by its own `Organization` record in Postgres, and every class/teacher/student/incident row is scoped to that organization. Super Admins can impersonate a school’s admin console without leaking data across schools.
 
 ## Priority: Super Admin & Multi‑Tenant Auth
 
@@ -101,7 +103,9 @@ behaviour-logger
 | `NEXTAUTH_SECRET` | Random base64 string (`openssl rand -base64 32`). |
 | `ALLOWED_GOOGLE_DOMAIN` | Optional: restrict sign-in to a single domain. Leave blank for public access. |
 | `ADMIN_EMAILS` | Comma-separated list of addresses to auto-provision as admins on first login. |
-| `DATABASE_URL` | `file:./prisma/tracktally.db` for local dev; point to your managed database in staging/production. |
+| `DATABASE_URL` | Prisma Client connection. Use the Neon **pooler** host with `?sslmode=require&pgbouncer=true` in staging/production so prepared statements are disabled. |
+| `DIRECT_DATABASE_URL` | Owner connection (non-pooled) that Prisma Migrate uses via `directUrl` to run migrations safely. |
+| `SHADOW_DATABASE_URL` | Owner connection to a dedicated `*_shadow` database used by `prisma migrate dev`. |
 | `NEXTAUTH_URL` | Public base URL used for OAuth callbacks (e.g. your named Cloudflare tunnel or production domain). |
 | `SMTP_*` | Optional SMTP credentials for incident notification emails. |
 
@@ -160,7 +164,7 @@ npx prisma generate                  # regenerates @prisma/client (stop dev serv
 - **Database convergence (Neon Postgres)**  
   - Migrate the Prisma schema from SQLite to Postgres, generate migrations, and run them against a new database in Neon.  
   - Create migration scripts to import existing incidents (if required) and provision read/write roles with least privilege.  
-  - Update `DATABASE_URL` secrets (dev/staging/prod) to point at the respective Neon branches.
+  - Update the three Prisma URLs (`DATABASE_URL` pooler for the app, `DIRECT_DATABASE_URL` owner direct connection, `SHADOW_DATABASE_URL` for migrate dev) per environment/branch.
 
 - **Shared authentication (Google via NextAuth)**  
   - Reuse or clone the Google OAuth client from SpellTally’s Google Cloud project; add TrackTally domains to authorized origins/redirects.  
@@ -226,3 +230,319 @@ npx prisma generate                  # regenerates @prisma/client (stop dev serv
 - **Keyboard/gesture polish**
   - Let Enter submit on the final step, support swipe left/right between steps, and ensure focus lands on the next key control.
   - *Acceptance*: Enter submits on the last step; swipes navigate steps; focus/ARIA states remain correct.
+
+---
+
+## Code Review Recommendations & Future Actions
+
+Based on a comprehensive code review conducted January 2025, the following actions are prioritized to improve security, scalability, and maintainability.
+
+### 🎯 IMMEDIATE ACTIONS (Pre-Testing Phase with 1-2 Schools)
+
+**Current Context**: Pre-production testing with 1-2 schools starting next year. Focus on critical security and stability fixes only.
+
+**Must Fix Before ANY Testing (Total: ~18-20 hours)**
+
+1. **Fix Domain Authorization Default** - **1 hour** - CRITICAL SECURITY
+   - **File**: `auth.ts:28` (isAllowedDomain function)
+   - **Issue**: Currently allows ANY Google account if `ALLOWED_GOOGLE_DOMAIN` is unset
+   - **Risk**: Unauthorized users could access the system
+   - **Fix**: Change line 28 from `if (!normalizedDomain) return true;` to `if (!normalizedDomain) return false;`
+   - **Test**: Verify sign-in blocked when env var missing
+
+2. **Implement Mobile Auth Ticket Cleanup** - **2-3 hours** - PREVENTS DB BLOAT
+   - **File**: Create `app/api/cron/cleanup/route.ts`
+   - **Issue**: Expired tickets accumulate indefinitely
+   - **Fix**:
+     ```typescript
+     import { pruneExpiredTickets } from '@/lib/mobile-auth';
+     export async function GET() {
+       await pruneExpiredTickets();
+       return Response.json({ ok: true });
+     }
+     ```
+   - **Configure**: Add to `vercel.json`:
+     ```json
+     {
+       "crons": [{
+         "path": "/api/cron/cleanup",
+         "schedule": "0 2 * * *"
+       }]
+     }
+     ```
+
+3. **Add Critical Path Tests** - **8 hours** - ENSURES DATA ISOLATION
+   - **Setup**: Vitest + React Testing Library
+   - **Priority Tests**:
+     - Multi-tenant isolation (School A can't see School B incidents)
+     - Auth domain validation
+     - Incident creation and retrieval
+   - **Files**: Create `__tests__/auth.test.ts`, `__tests__/incidents.test.ts`, `__tests__/organizations.test.ts`
+   - **Why**: Manual testing won't catch data leakage between organizations
+
+4. **Add Audit Logging** - **4 hours** - TROUBLESHOOTING & ACCOUNTABILITY
+   - **Files**: All `app/api/admin/*` routes
+   - **Add**: Simple audit trail for admin actions
+   - **Example**:
+     ```typescript
+     await prisma.auditLog.create({
+       data: {
+         action: 'CREATE_STUDENT',
+         performedBy: session.user.email,
+         meta: JSON.stringify({ studentId, classroomId })
+       }
+     });
+     ```
+
+5. **Add React Error Boundaries** - **3 hours** - PREVENTS APP CRASHES
+   - **Files**: `app/layout.tsx`, `components/LoggerApp.tsx`
+   - **Why**: Unhandled errors will crash entire app during testing
+   - **Fallback**: Show friendly error message instead of blank screen
+
+**Timeline**: Complete items 1-5 within 2-3 days before any school testing begins.
+
+---
+
+### 📅 PHASED ROLLOUT PLAN (1-2 Schools)
+
+**Phase 0: Pre-Testing (NOW - Before Schools Start)**
+- Complete 5 immediate actions above
+- Set up Sentry DSN and verify error tracking
+- Document backup/restore procedure
+- **Ready for**: Internal testing and first school onboarding
+
+**Phase 1: Initial Testing (First 3 Months)**
+- Monitor error rates and performance in Sentry
+- Gather feedback on UX and workflows
+- Watch for edge cases in multi-tenant isolation
+- **Defer**: Scalability fixes (pagination, rate limiting, N+1 queries)
+- **Why**: 1-2 schools won't hit these limits (< 10K incidents, < 50 concurrent users)
+
+**Phase 2: Expanding to 5-10 Schools (Months 4-6)**
+- Add items 7, 11, 24 (Pagination, Ticket cleanup confirmed working, DB pooling)
+- Implement item 2 (CSRF protection)
+- Set up CI/CD pipeline (item 10)
+- **When to start**: Once you have 3+ schools committed
+
+**Phase 3: Scaling to 20+ Schools (Months 7-12)**
+- Implement distributed rate limiting (item 1)
+- Fix N+1 queries (not in main list but identified in scalability review)
+- Add caching layer (item 17)
+- Optimize Sheets integration (item 22)
+- **When to start**: When incident exports start timing out or Sheets API hits quota
+
+**Phase 4: Production at Scale (Year 2)**
+- Complete all remaining security, code quality, and monitoring items
+- Migrate to stable dependencies when available
+- Add comprehensive E2E testing
+
+---
+
+### 🔒 SECURITY CHECKLIST FOR 1-2 SCHOOLS
+
+**Before First School Onboarding:**
+- [x] Security headers configured (already done in `next.config.mjs`)
+- [x] Sentry PII scrubbing enabled (already done in `sentry.server.config.ts`)
+- [ ] Fix domain authorization default (item 1 above)
+- [ ] Set `ALLOWED_GOOGLE_DOMAIN` in production env vars
+- [ ] Verify organization data isolation with tests (item 3 above)
+- [ ] Add audit logging (item 4 above)
+- [ ] Document incident response procedure
+
+**Nice to Have (But Not Blocking):**
+- CSRF protection (defer to Phase 2)
+- API versioning (defer to Phase 3)
+- Comprehensive rate limiting (current in-memory is fine for 2 schools)
+
+---
+
+### 📊 CAPACITY LIMITS (Current Architecture)
+
+**What Works Fine for 1-2 Schools:**
+- ✅ In-memory rate limiting (single server deployment)
+- ✅ No pagination (< 10K incidents, < 200 students per school)
+- ✅ Synchronous Sheets appends (< 10 concurrent teachers)
+- ✅ N+1 queries in roster (< 20 classrooms per teacher)
+- ✅ CSV imports without batching (< 1K row files)
+- ✅ No distributed caching
+
+**When You'll Hit Limits:**
+- Incidents Export: ~50K+ incidents (Year 2+)
+- Rate Limiting: 5+ schools with load balancing
+- Google Sheets: 100+ concurrent writes/min
+- Roster Performance: 50+ classrooms per teacher
+- CSV Imports: 10K+ row files
+
+**Recommendation**: Don't optimize prematurely. Your current architecture is fine for 1-2 schools.
+
+---
+
+### 📚 COMPLETE ROADMAP (For Future Reference)
+
+The following items are catalogued for future phases as your deployment scales. **These are NOT needed for initial 1-2 school testing.**
+
+#### CRITICAL (Fix Before Production at Scale) 🔥
+
+1. **Replace In-Memory Rate Limiter** - **DEFER TO PHASE 3**
+   - **Issue**: Current rate limiter (`lib/rate-limit.ts`) uses in-memory Map, won't work across multiple server instances
+   - **Impact**: Attackers can bypass rate limits by hitting different servers in distributed deployment
+   - **Action**: Migrate to Redis-based rate limiting (Upstash Redis, Vercel KV, or similar)
+   - **Files**: `lib/rate-limit.ts`, all API routes using `rateLimit()`
+   - **Estimated Effort**: 4-6 hours
+
+2. **Add CSRF Protection** - **DEFER TO PHASE 2**
+   - **Issue**: Custom API routes lack CSRF tokens; only NextAuth routes are protected
+   - **Impact**: Cross-site request forgery attacks possible on state-changing operations
+   - **Action**: Implement CSRF middleware or use NextAuth's CSRF protection for all API routes
+   - **Files**: `middleware.ts`, all POST/PUT/DELETE routes
+   - **Estimated Effort**: 3-4 hours
+   - **Why Deferred**: Low risk with small controlled user base; Google OAuth provides some protection
+
+3. **Add Global Request Size Limits** - **DEFER TO PHASE 2**
+   - **Issue**: Only `/api/log-incident` has 10KB limit; other routes accept unlimited payloads
+   - **Impact**: DoS attacks via large request bodies
+   - **Action**: Add global middleware for request size limits or per-route validation
+   - **Files**: `middleware.ts`, Next.js config
+   - **Estimated Effort**: 2-3 hours
+   - **Why Deferred**: Low risk with trusted users; Vercel has default limits
+
+#### HIGH PRIORITY (For Scaling Beyond 5 Schools) ⚠️
+
+4. **Add API Pagination** - **DEFER TO PHASE 2**
+   - **Issue**: `/api/admin/students` and `/api/admin/classes` return all records
+   - **Impact**: Timeouts and performance issues with 1000+ records
+   - **Action**: Implement cursor-based or offset pagination with configurable page size
+   - **Files**: `app/api/admin/students/route.ts`, `app/api/admin/classes/route.ts`
+   - **Estimated Effort**: 4-6 hours
+   - **When Needed**: >1000 students or >50K incidents
+
+5. **Decide on Single Source of Truth** - **DEFER TO PHASE 3**
+   - **Issue**: Incidents written to both DB and Google Sheets; DB failures ignored
+   - **Impact**: Data inconsistency, hard to troubleshoot
+   - **Action**: Make PostgreSQL the primary source, export to Sheets periodically or on-demand
+   - **Files**: `app/api/log-incident/route.ts`, `lib/sheets.ts`
+   - **Estimated Effort**: 8-12 hours (includes data migration plan)
+   - **When Needed**: When you need better data consistency guarantees
+
+6. **Set Up CI/CD Pipeline** - **DEFER TO PHASE 2**
+    - **Issue**: No automated checks on pull requests
+    - **Action**: GitHub Actions workflow for:
+      - TypeScript type checking
+      - ESLint
+      - Run tests (when added)
+      - Build verification
+      - Prisma migration checks
+    - **Files**: Create `.github/workflows/ci.yml`
+    - **Estimated Effort**: 3-4 hours
+    - **When Needed**: Once you have regular code changes from multiple developers
+
+#### MEDIUM PRIORITY (Technical Debt) 📋
+
+7. **Refactor Large Components** - **DEFER TO PHASE 3**
+    - **Issue**: `LoggerApp.tsx` likely 500+ lines; difficult to maintain
+    - **Action**: Split into smaller components (StudentPicker, IncidentForm, OfflineQueueManager)
+    - **Files**: `components/LoggerApp.tsx`
+    - **Estimated Effort**: 8-12 hours
+
+8. **Add JSDoc Documentation** - **ONGOING**
+    - **Issue**: Complex functions lack documentation
+    - **Action**: Add JSDoc comments for public APIs and business logic as you modify code
+    - **Priority Functions**: `ensureTeacher`, `resolveOrganizationIdForRequest`, `flushQueue`, rate limiting
+    - **Estimated Effort**: 6-8 hours
+
+9. **Plan Stable Dependency Migration** - **Q1-Q2 2025**
+    - **Issue**: Using Next.js 15 canary, React 19 RC, NextAuth beta
+    - **Action**: Monitor release channels, test with stable versions when available
+    - **Timeline**: Q1-Q2 2025 (when Next.js 15 and React 19 stable)
+    - **Estimated Effort**: 8-16 hours (testing + bug fixes)
+
+10. **Add Request Validation Middleware** - **DEFER TO PHASE 3**
+    - **Issue**: Every route manually calls `requireAdmin()`, repetitive code
+    - **Action**: Create higher-order function or middleware wrapper for common patterns
+    - **Files**: Create `lib/api-middleware.ts`, refactor all API routes
+    - **Estimated Effort**: 6-8 hours
+
+11. **Implement Caching Layer** - **DEFER TO PHASE 3**
+    - **Issue**: Rosters and options fetched on every request
+    - **Action**: Cache in Redis with TTL or use SWR/React Query on client
+    - **Files**: `app/api/roster/route.ts`, `app/api/options/route.ts`, frontend components
+    - **Estimated Effort**: 6-10 hours
+    - **When Needed**: >10 schools with frequent roster access
+
+12. **Version Critical API Endpoints** - **DEFER TO PHASE 3**
+    - **Issue**: No API versioning; breaking changes will break mobile apps
+    - **Action**: Prefix critical endpoints with `/api/v1/` and maintain backward compatibility
+    - **Files**: All API routes, update mobile app to use versioned endpoints
+    - **Estimated Effort**: 4-6 hours
+    - **When Needed**: Before making breaking changes to mobile API
+
+#### LOW PRIORITY (Nice to Have) ✨
+
+13. **Add Soft Deletes** - **DEFER TO PHASE 4**
+    - **Issue**: Hard deletes for students/classrooms could orphan incidents
+    - **Action**: Add `deletedAt` timestamp fields, filter out soft-deleted records
+    - **Files**: `prisma/schema.prisma`, all Prisma queries
+    - **Estimated Effort**: 8-12 hours (schema + migration + query updates)
+
+14. **Replace Console Logging** - **DEFER TO PHASE 4**
+    - **Issue**: 34 instances of `console.log/error/warn` in production code
+    - **Action**: Use structured logging library (Pino, Winston) with log levels
+    - **Files**: All files using console.*
+    - **Estimated Effort**: 4-6 hours
+
+15. **Document Migration Rollback Procedures** - **PHASE 1**
+    - **Issue**: No documented rollback strategy for database migrations
+    - **Action**: Create runbook for each migration with rollback SQL scripts
+    - **Files**: Create `docs/ops/backup-restore.md`
+    - **Estimated Effort**: 3-4 hours
+
+16. **Optimize Google Sheets Integration** - **DEFER TO PHASE 3**
+    - **Issue**: Linear append will slow at 10,000+ rows
+    - **Action**: Implement batch writes, automatic archiving, or BigQuery export
+    - **Files**: `lib/sheets.ts`
+    - **Estimated Effort**: 8-12 hours
+    - **When Needed**: >10K incidents per school
+
+#### Environment & Infrastructure
+
+17. **Add Environment Variable Validation** - **PHASE 2**
+    - **Action**: Use Zod or envalid to validate all required env vars at startup
+    - **Files**: Create `lib/env.ts`, import in `auth.ts` and main entry points
+    - **Estimated Effort**: 2-3 hours
+
+18. **Set Up Database Connection Pooling** - **PHASE 2**
+    - **Issue**: No explicit connection pool configuration
+    - **Action**: Add Prisma pool settings (`connection_limit`, `pool_timeout`)
+    - **Files**: `lib/prisma.ts`
+    - **Estimated Effort**: 1-2 hours
+
+19. **Implement Health Check Endpoint** - **PHASE 1 (SIMPLE VERSION)**
+    - **Action**: Expand `/api/health` to check DB connection, Sheets API, auth status
+    - **Files**: `app/api/health/route.ts`
+    - **Estimated Effort**: 2-3 hours
+
+20. **Document Backup & Restore Procedures** - **PHASE 0 (IMMEDIATE)**
+    - **Action**: Document Neon backup strategy, test restore procedure
+    - **Files**: Create `docs/ops/backup-restore.md`
+    - **Estimated Effort**: 2-3 hours
+    - **Critical**: Must have before any production data
+
+#### Monitoring & Observability
+
+21. **Configure Sentry Properly** - **ALREADY DONE ✅**
+    - Sentry DSN, PII scrubbing, error sampling already configured
+    - Just need to add DSN to production environment variables
+
+22. **Add Performance Monitoring** - **PHASE 2**
+    - **Action**: Track API response times, database query performance, incident logging success rate
+    - **Tools**: Sentry Performance, Vercel Analytics, or custom metrics
+    - **Estimated Effort**: 4-6 hours
+
+23. **Set Up Alerting** - **PHASE 1**
+    - **Action**: Configure alerts for:
+      - Authentication failures spike
+      - Sheets API errors
+      - Database connection failures
+      - High error rates
+    - **Estimated Effort**: 3-4 hours
+    - **Tool**: Use Sentry alerts (already integrated)

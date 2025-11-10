@@ -1,7 +1,9 @@
+import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { requireAdmin } from "../../../../../lib/admin-auth";
 import { sanitize } from "../../../../../lib/validation";
+import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
 
 type RosterRow = {
   studentId: string;
@@ -113,9 +115,26 @@ function parseCsv(text: string, mapping?: Partial<Record<"studentId" | "firstNam
   });
 }
 
+async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
+  const url = new URL(request.url);
+  const requestedDomain = url.searchParams.get("domain");
+  return resolveOrganizationIdForRequest({
+    session,
+    baseOrganizationId: baseOrgId,
+    requestedDomain: requestedDomain ?? undefined,
+  });
+}
+
 export async function POST(request: Request) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
 
   const form = await request.formData();
   const classroomId = String(form.get("classroomId") ?? "");
@@ -133,6 +152,17 @@ export async function POST(request: Request) {
 
   if (!classroomId) {
     return NextResponse.json({ ok: false, error: "classroomId is required." }, { status: 400 });
+  }
+
+  const classroom = await prisma.classroom.findFirst({
+    where: { id: classroomId, organizationId: targetOrgId },
+    select: { id: true },
+  });
+  if (!classroom) {
+    return NextResponse.json(
+      { ok: false, error: "Classroom not found in this organization." },
+      { status: 404 },
+    );
   }
 
   if (!(file instanceof File)) {
@@ -176,6 +206,7 @@ export async function POST(request: Request) {
           guardians: sanitize(row.guardians ?? "") || null,
           active: true,
           classroomId,
+          organizationId: targetOrgId,
         },
         create: {
           studentId,
@@ -184,6 +215,7 @@ export async function POST(request: Request) {
           guardians: sanitize(row.guardians ?? "") || null,
           classroomId,
           createdAt: now,
+          organizationId: targetOrgId,
         },
       });
       imported += 1;

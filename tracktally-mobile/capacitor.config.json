@@ -1,0 +1,14 @@
+{
+  "appId": "com.tebtally.tracktally",
+  "appName": "TrackTally",
+  "webDir": "dist",
+  "server": {
+    "url": "https://tracktally-staging.vercel.app",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}

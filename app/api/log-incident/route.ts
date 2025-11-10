@@ -1,4 +1,5 @@
-﻿import { headers } from "next/headers";
+﻿import crypto from "node:crypto";
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { appendIncidentRow } from "../../../lib/sheets";
 import { prisma } from "../../../lib/prisma";
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
   const session = await auth();
   const userEmail = session?.user?.email?.toLowerCase();
   const role = session?.user?.role ?? "teacher";
+  const organizationId = session?.user?.organizationId ?? null;
 
   if (!session || !userEmail) {
     return buildError("Unauthorized", 401);
@@ -107,6 +109,10 @@ export async function POST(request: Request) {
 
   if (role !== "teacher" && role !== "admin") {
     return buildError("Forbidden", 403);
+  }
+
+  if (!organizationId) {
+    return buildError("No organization assigned to this account.", 403);
   }
 
   const headerStore = headers();
@@ -159,9 +165,13 @@ export async function POST(request: Request) {
     // 1) Persist to the database for audit/analytics (idempotent on uuid)
     try {
       const [studentRecord, classroomRecord] = await Promise.all([
-        prisma.student.findUnique({ where: { studentId: data.studentId } }),
+        prisma.student.findFirst({
+          where: { studentId: data.studentId, organizationId },
+        }),
         data.classCode
-          ? prisma.classroom.findUnique({ where: { code: data.classCode } })
+          ? prisma.classroom.findFirst({
+              where: { code: data.classCode, organizationId },
+            })
           : Promise.resolve(null as any),
       ]);
 
@@ -182,6 +192,7 @@ export async function POST(request: Request) {
           actionTaken: data.actionTaken || null,
           note: data.note || null,
           device: device || null,
+          organizationId,
         },
       });
     } catch (dbErr) {
@@ -206,8 +217,8 @@ export async function POST(request: Request) {
 
     if (data.studentId) {
       try {
-        const studentRecord = await prisma.student.findUnique({
-          where: { studentId: data.studentId },
+        const studentRecord = await prisma.student.findFirst({
+          where: { studentId: data.studentId, organizationId },
           include: {
             classroom: {
               include: {

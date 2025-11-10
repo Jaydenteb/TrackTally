@@ -1,0 +1,65 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mark-bg" x1="18" y1="14" x2="106" y2="104" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#36D0F9" />
+      <stop offset="1" stop-color="#6E3DFF" />
+    </linearGradient>
+    <linearGradient id="mark-gloss" x1="36" y1="26" x2="84" y2="84" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.85" />
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+    <linearGradient id="letter-fill" x1="40" y1="38" x2="86" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E9F5FF" />
+      <stop offset="1" stop-color="#FFFFFF" />
+    </linearGradient>
+    <linearGradient id="hat-fill" x1="60" y1="16" x2="94" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#59D5FF" />
+      <stop offset="1" stop-color="#5A5CFF" />
+    </linearGradient>
+    <filter id="mark-shadow" x="-22%" y="-22%" width="144%" height="144%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="rgba(24,34,72,0.22)" />
+    </filter>
+    <filter id="sparkle-glow" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="2" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#mark-shadow)">
+    <circle cx="60" cy="60" r="48" fill="url(#mark-bg)" />
+    <path
+      d="M94 38C88 30 79 26 68 24C54 20 38 23 26 32"
+      stroke="url(#mark-gloss)"
+      stroke-width="10"
+      stroke-linecap="round"
+    />
+    <path
+      d="M87.5 37H55.5V46.4H69.1V92H80.4V46.4H87.5V37Z"
+      fill="url(#letter-fill)"
+    />
+    <path
+      d="M57.6 37C45.6 37 36.5 44.4 36.5 54.2C36.5 65 44.5 70.3 56 72.1C63.6 73.3 66.5 75 66.5 79.3C66.5 83.9 61.8 86.9 55.1 86.9C49.3 86.9 44.8 84.9 41.6 81.1L32 84.3C36.1 92.4 45.4 98 55.5 98C69.1 98 78.9 90.4 78.9 79C78.9 69 72.1 64.5 60.1 62.5C51.7 61.1 48.2 58.7 48.2 54.4C48.2 49.8 52.3 46.8 58.7 46.8C64 46.8 68.3 48.9 71.2 52.4L80.6 48.8C76.6 41.2 68 37 57.6 37Z"
+      fill="url(#letter-fill)"
+    />
+    <path
+      d="M84.7 27.6C89.2 23.5 95 21.4 101 22.3C106.8 23.1 110.7 26.2 112 30.2C113.6 35 110.8 37.8 104.9 38.9L85.9 42.5C83.7 42.9 82.1 41.6 82.6 39.7L84.7 27.6Z"
+      fill="url(#hat-fill)"
+    />
+    <path
+      d="M85 30C86.2 26.2 82.9 23 79.3 21.8C74.5 20.1 68 20.9 62.1 24L56.5 27.1C54.9 27.9 55 30.1 56.7 30.7L77.8 37.8C79.7 38.5 81.6 37.3 82.1 35.3L85 30Z"
+      fill="#6B89FF"
+    />
+    <path
+      d="M35 91.5C37.2 85.8 42.4 82.7 49.7 84.5C58.9 86.8 73.3 86.5 84.3 79.5C88 77.1 91.2 73.8 93.7 69.4"
+      stroke="#FF9D6C"
+      stroke-width="6"
+      stroke-linecap="round"
+      stroke-opacity="0.8"
+    />
+    <circle cx="34" cy="42" r="5.2" fill="#23E6E0" filter="url(#sparkle-glow)" opacity="0.9" />
+    <circle cx="97.5" cy="70.5" r="4" fill="#7A58FF" filter="url(#sparkle-glow)" opacity="0.9" />
+    <circle cx="52" cy="102" r="4" fill="#FF9D6C" filter="url(#sparkle-glow)" opacity="0.85" />
+  </g>
+</svg>

@@ -27,7 +27,14 @@ const swSource = `
   self.addEventListener("fetch", (event) => {
     const { request } = event;
     if (request.method !== "GET") return;
+    if (request.mode === "navigate") return;
     if (request.url.includes("/api/")) return;
+    try {
+      const requestUrl = new URL(request.url);
+      if (requestUrl.origin !== self.location.origin) return;
+    } catch {
+      return;
+    }
 
     event.respondWith(
       caches.match(request).then((cached) => {

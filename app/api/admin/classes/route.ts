@@ -1,13 +1,33 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import { requireAdmin } from "../../../../lib/admin-auth";
+import type { Session } from "next-auth";
 import { classroomCreateSchema, sanitize } from "../../../../lib/validation";
+import { resolveOrganizationIdForRequest } from "../../../../lib/organizations";
+
+async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
+  const url = new URL(request.url);
+  const requestedDomain = url.searchParams.get("domain");
+  return resolveOrganizationIdForRequest({
+    session,
+    baseOrganizationId: baseOrgId,
+    requestedDomain: requestedDomain ?? undefined,
+  });
+}
 
 export async function GET(request: Request) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
 
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
+
   const classes = await prisma.classroom.findMany({
+    where: { organizationId: targetOrgId },
     orderBy: { name: "asc" },
     include: {
       students: { where: { active: true }, select: { id: true } },
@@ -52,8 +72,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
 
   let body: unknown;
   try {
@@ -82,8 +108,8 @@ export async function POST(request: Request) {
   }
 
   if (homeroomTeacherId) {
-    const teacherExists = await prisma.teacher.findUnique({
-      where: { id: homeroomTeacherId },
+    const teacherExists = await prisma.teacher.findFirst({
+      where: { id: homeroomTeacherId, organizationId: targetOrgId },
       select: { id: true },
     });
     if (!teacherExists) {
@@ -100,6 +126,7 @@ export async function POST(request: Request) {
         name,
         code,
         homeroomTeacherId: homeroomTeacherId ?? null,
+        organizationId: targetOrgId,
       },
     });
 

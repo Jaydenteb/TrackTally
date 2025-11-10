@@ -1,13 +1,41 @@
+import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/prisma";
 import { requireAdmin } from "../../../../../lib/admin-auth";
 import { sanitizeOptional, studentUpdateSchema } from "../../../../../lib/validation";
+import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
+import { createAuditLog, AuditActions } from "../../../../../lib/audit";
 
 type Params = { params: { id: string } };
 
+async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
+  const url = new URL(request.url);
+  const requestedDomain = url.searchParams.get("domain");
+  return resolveOrganizationIdForRequest({
+    session,
+    baseOrganizationId: baseOrgId,
+    requestedDomain: requestedDomain ?? undefined,
+  });
+}
+
 export async function PATCH(request: Request, { params }: Params) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+
+  let targetOrgId: string;
+  try {
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
+
+  const studentRecord = await prisma.student.findUnique({
+    where: { id: params.id },
+    select: { organizationId: true },
+  });
+  if (!studentRecord || studentRecord.organizationId !== targetOrgId) {
+    return NextResponse.json({ ok: false, error: "Student not found." }, { status: 404 });
+  }
 
   let body: unknown;
   try {
@@ -72,7 +100,21 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (parsed.data.classroomId !== undefined) {
-    updates.classroomId = parsed.data.classroomId;
+    if (parsed.data.classroomId === null) {
+      updates.classroomId = null;
+    } else {
+      const classroom = await prisma.classroom.findFirst({
+        where: { id: parsed.data.classroomId, organizationId: targetOrgId },
+        select: { id: true },
+      });
+      if (!classroom) {
+        return NextResponse.json(
+          { ok: false, error: "Classroom not found in this organization." },
+          { status: 404 },
+        );
+      }
+      updates.classroomId = parsed.data.classroomId;
+    }
   }
 
   if (Object.keys(updates).length === 0) {
@@ -87,6 +129,19 @@ export async function PATCH(request: Request, { params }: Params) {
       where: { id: params.id },
       data: updates,
     });
+
+    // Audit log
+    await createAuditLog({
+      action: AuditActions.UPDATE_STUDENT,
+      performedBy: session.user?.email ?? "unknown",
+      meta: {
+        studentId: student.studentId,
+        studentName: `${student.firstName} ${student.lastName}`,
+        updates: Object.keys(updates),
+        organizationId: targetOrgId,
+      },
+    });
+
     const response = NextResponse.json({ ok: true, data: student });
     if (rateHeaders) {
       Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));
@@ -102,14 +157,24 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(request: Request, { params }: Params) {
-  const { error, rateHeaders } = await requireAdmin(request);
+  const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
 
+  let targetOrgId: string;
   try {
-    await prisma.student.update({
-      where: { id: params.id },
+    targetOrgId = await getOrgIdFromRequest(request, session, organizationId ?? null);
+  } catch (err: any) {
+    return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
+  }
+
+  try {
+    const updated = await prisma.student.updateMany({
+      where: { id: params.id, organizationId: targetOrgId },
       data: { active: false },
     });
+    if (updated.count === 0) {
+      return NextResponse.json({ ok: false, error: "Student not found." }, { status: 404 });
+    }
     const response = NextResponse.json({ ok: true });
     if (rateHeaders) {
       Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));

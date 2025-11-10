@@ -1,47 +1,64 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { signOut } from "next-auth/react";
 import { ClassManager } from "./ClassManager";
 import { TeacherManager } from "./TeacherManager";
 import { StudentManager } from "./StudentManager";
-import { ClassRecord, StudentRecord, TeacherRecord } from "./types";
+import { OptionManager, type IncidentOptionGroups } from "./OptionManager";
+import { IncidentControls } from "./IncidentControls";
+import type { ClassRecord, StudentRecord, TeacherRecord } from "./types";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { ...init, cache: "no-store" });
-  if (!response.ok) {
-    const text = await response.text();
+  const res = await fetch(url, { cache: "no-store", ...init });
+  if (!res.ok) {
+    const text = await res.text();
     try {
       const parsed = JSON.parse(text);
       if (parsed?.error) throw new Error(parsed.error);
     } catch {
-      // ignore JSON parse errors
+      // ignore
     }
-    throw new Error(text || `Request failed (${response.status})`);
+    throw new Error(text || `Request failed (${res.status})`);
   }
-  return response.json();
+  return res.json();
 }
 
 type Props = {
   domain: string;
+  impersonatedDomain?: string | null;
+  isSuperAdminView?: boolean;
 };
 
-export function AdminDashboard({ domain }: Props) {
+export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = false }: Props) {
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [incidentOptions, setIncidentOptions] = useState<IncidentOptionGroups | null>(null);
+  const [optionsDomain, setOptionsDomain] = useState<string | null>(null);
+  const [savingOptions, setSavingOptions] = useState(false);
+  const [retentionDays, setRetentionDays] = useState<number>(365);
+
+  const buildUrl = useCallback(
+    (base: string) => {
+      if (!impersonatedDomain) return base;
+      const sep = base.includes("?") ? "&" : "?";
+      return `${base}${sep}domain=${encodeURIComponent(impersonatedDomain)}`;
+    },
+    [impersonatedDomain],
+  );
 
   const loadClasses = useCallback(async () => {
-    const payload = await fetchJson<{ ok: boolean; data: ClassRecord[] }>("/api/admin/classes");
+    const payload = await fetchJson<{ ok: boolean; data: ClassRecord[] }>(buildUrl("/api/admin/classes"));
     setClasses(payload.data ?? []);
-  }, []);
+  }, [buildUrl]);
 
   const loadTeachers = useCallback(async () => {
-    const payload = await fetchJson<{ ok: boolean; data: TeacherRecord[] }>("/api/admin/teachers");
+    const payload = await fetchJson<{ ok: boolean; data: TeacherRecord[] }>(buildUrl("/api/admin/teachers"));
     setTeachers(payload.data ?? []);
-  }, []);
+  }, [buildUrl]);
 
   const loadStudents = useCallback(
     async (classId: string | null) => {
@@ -50,16 +67,38 @@ export function AdminDashboard({ domain }: Props) {
         return;
       }
       const payload = await fetchJson<{ ok: boolean; data: StudentRecord[] }>(
-        `/api/admin/students?classroomId=${classId}`,
+        buildUrl(`/api/admin/students?classroomId=${classId}`),
       );
       setStudents(payload.data ?? []);
     },
-    [],
+    [buildUrl],
   );
 
+  const loadIncidentOptions = useCallback(async () => {
+    try {
+      const payload = await fetchJson<{ ok: boolean; data: { domain?: string; options: IncidentOptionGroups } }>(
+        buildUrl(`/api/admin/options`),
+      );
+      setIncidentOptions(payload.data?.options ?? null);
+      setOptionsDomain(payload.data?.domain ?? (impersonatedDomain ?? null));
+    } catch (err) {
+      // optional
+      setIncidentOptions(null);
+    }
+  }, [buildUrl, impersonatedDomain]);
+
+  const loadRetention = useCallback(async () => {
+    try {
+      const payload = await fetchJson<{ ok: true; days: number }>(buildUrl("/api/admin/incidents/retention"));
+      setRetentionDays(payload.days);
+    } catch {
+      // ignore
+    }
+  }, [buildUrl]);
+
   const reloadAll = useCallback(async () => {
-    await Promise.all([loadClasses(), loadTeachers()]);
-  }, [loadClasses, loadTeachers]);
+    await Promise.all([loadClasses(), loadTeachers(), loadIncidentOptions(), loadRetention()]);
+  }, [loadClasses, loadTeachers, loadIncidentOptions, loadRetention]);
 
   useEffect(() => {
     void reloadAll();
@@ -80,6 +119,8 @@ export function AdminDashboard({ domain }: Props) {
     setTimeout(() => setMessage(null), 3200);
   }
 
+  const effectiveDomain = useMemo(() => impersonatedDomain ?? domain, [impersonatedDomain, domain]);
+
   return (
     <div style={{ display: "grid", gap: "1.5rem", width: "min(1080px, 100%)" }}>
       <header
@@ -91,79 +132,61 @@ export function AdminDashboard({ domain }: Props) {
           gap: "0.75rem",
           background: "white",
           borderRadius: "20px",
-          padding: "1.25rem 1.5rem",
           boxShadow: "0 25px 55px -40px rgba(15,23,42,0.35)",
+          padding: "1.25rem 1.5rem",
         }}
       >
-        <div style={{ maxWidth: "640px" }}>
-          <h1 style={{ margin: 0, fontSize: "1.8rem", color: "#0f172a" }}>TrackTally Admin</h1>
-          <p style={{ margin: "0.4rem 0 0", color: "#475569" }}>
-            Manage classes, teachers, and student rosters for your school. Access is limited to
-            Google Workspace admins from {domain}.
+        <div>
+          <h1 style={{ margin: 0, fontSize: "1.75rem", color: "#0f172a" }}>Admin</h1>
+          <p style={{ margin: "0.25rem 0 0", color: "#475569" }}>
+            Workspace domain: <strong>{effectiveDomain}</strong>
+            {isSuperAdminView && impersonatedDomain ? (
+              <>
+                {" · managing "}
+                <a href="/super-admin" style={{ color: "#0f766e", fontWeight: 600 }}>Exit to Super Admin console</a>
+              </>
+            ) : null}
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <a
-            href="/admin/incidents"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "0.65rem 1rem",
-              borderRadius: "12px",
-              border: "1px solid #0f766e",
-              color: "#0f766e",
-              textDecoration: "none",
-              fontWeight: 600,
-              background: "#ecfeff",
-            }}
-          >
-            Incidents
-          </a>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: 'center', flexWrap: 'wrap' }}>
           <a
             href="/teacher"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "0.65rem 1rem",
-              borderRadius: "12px",
-              background: "#0f766e",
-              color: "white",
+              border: "1px solid #cbd5f5",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
               textDecoration: "none",
+              color: "#0f172a",
+              background: "#f8fafc",
               fontWeight: 600,
             }}
           >
-            Open tracker
+            Open incident logger
           </a>
           <a
-            href="/"
+            href="/api/health"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "0.65rem 1rem",
-              borderRadius: "12px",
-              border: "1px solid #0f766e",
-              color: "#0f766e",
+              border: "1px solid #cbd5f5",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
               textDecoration: "none",
+              color: "#0f172a",
+              background: "#f8fafc",
               fontWeight: 600,
             }}
           >
-            Teacher home
+            Check health
           </a>
           <button
             type="button"
-            onClick={() => {
-              void signOut({ callbackUrl: "/login" });
-            }}
+            onClick={() => signOut({ callbackUrl: "/login" })}
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "0.65rem 1rem",
-              borderRadius: "12px",
-              border: "1px solid transparent",
-              background: "#e2e8f0",
-              color: "#0f172a",
-              fontWeight: 600,
+              border: "1px solid #cbd5f5",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
+              background: "white",
               cursor: "pointer",
+              fontWeight: 600,
             }}
           >
             Sign out
@@ -174,11 +197,12 @@ export function AdminDashboard({ domain }: Props) {
       {message && (
         <div
           style={{
-            padding: "0.85rem 1rem",
+            padding: "0.75rem 1rem",
             borderRadius: "12px",
-            background: "#f8fafc",
-            border: "1px solid #cbd5f5",
+            background: "#ecfeff",
+            border: "1px solid #0f766e",
             color: "#0f172a",
+            fontWeight: 600,
           }}
         >
           {message}
@@ -189,56 +213,51 @@ export function AdminDashboard({ domain }: Props) {
         classes={classes}
         teachers={teachers}
         onCreate={async (payload) => {
-          await fetchJson("/api/admin/classes", {
+          await fetchJson(buildUrl("/api/admin/classes"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
           report("Class created.");
-          await reloadAll();
+          await loadClasses();
         }}
         onUpdate={async (id, patch) => {
-          await fetchJson(`/api/admin/classes/${id}`, {
+          await fetchJson(buildUrl(`/api/admin/classes/${id}`), {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(patch),
           });
           report("Class updated.");
-          await reloadAll();
+          await loadClasses();
         }}
         onUpdateSpecialists={async (id, teacherIds) => {
-          await fetchJson(`/api/admin/classes/${id}/specialists`, {
+          await fetchJson(buildUrl(`/api/admin/classes/${id}/specialists`), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ teacherIds }),
           });
           report("Specialists updated.");
-          await reloadAll();
+          await loadClasses();
         }}
         onUploadRoster={async (id, file, mapping) => {
           const form = new FormData();
-          form.append("classroomId", id);
-          form.append("file", file);
-          form.append("mapping", JSON.stringify(mapping));
-          await fetchJson("/api/admin/classes/import", {
-            method: "POST",
-            body: form,
-          });
+          form.set("classroomId", id);
+          form.set("file", file);
+          form.set("mapping", JSON.stringify(mapping));
+          await fetchJson(buildUrl("/api/admin/classes/import"), { method: "POST", body: form });
           report("Roster imported.");
-          await Promise.all([reloadAll(), loadStudents(id)]);
+          await Promise.all([loadClasses(), loadStudents(id)]);
         }}
         onSeedRoster={async (id) => {
-          await fetchJson(`/api/admin/classes/${id}/seed`, { method: "POST" });
+          await fetchJson(buildUrl(`/api/admin/classes/${id}/seed`), { method: "POST" });
           report("Added sample students.");
-          await Promise.all([reloadAll(), loadStudents(id)]);
+          await Promise.all([loadClasses(), loadStudents(id)]);
         }}
         onDelete={async (id) => {
-          await fetchJson(`/api/admin/classes/${id}`, { method: "DELETE" });
+          await fetchJson(buildUrl(`/api/admin/classes/${id}`), { method: "DELETE" });
           report("Class archived.");
-          await Promise.all([reloadAll(), loadStudents(id)]);
-          if (selectedClassId === id) {
-            setSelectedClassId(null);
-          }
+          await Promise.all([loadClasses(), loadStudents(id)]);
+          if (selectedClassId === id) setSelectedClassId(null);
         }}
       />
 
@@ -246,27 +265,27 @@ export function AdminDashboard({ domain }: Props) {
         classes={classes}
         teachers={teachers}
         onCreate={async (payload) => {
-          await fetchJson("/api/admin/teachers", {
+          await fetchJson(buildUrl("/api/admin/teachers"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
           report("Teacher added.");
-          await reloadAll();
+          await loadTeachers();
         }}
         onUpdate={async (id, patch) => {
-          await fetchJson(`/api/admin/teachers/${id}`, {
+          await fetchJson(buildUrl(`/api/admin/teachers/${id}`), {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(patch),
           });
           report("Teacher updated.");
-          await reloadAll();
+          await loadTeachers();
         }}
         onDelete={async (id) => {
-          await fetchJson(`/api/admin/teachers/${id}`, { method: "DELETE" });
+          await fetchJson(buildUrl(`/api/admin/teachers/${id}`), { method: "DELETE" });
           report("Teacher removed.");
-          await reloadAll();
+          await loadTeachers();
         }}
       />
 
@@ -276,7 +295,7 @@ export function AdminDashboard({ domain }: Props) {
         students={students}
         onSelectClass={(id) => setSelectedClassId(id)}
         onUpdateStudent={async (id, patch) => {
-          await fetchJson(`/api/admin/students/${id}`, {
+          await fetchJson(buildUrl(`/api/admin/students/${id}`), {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(patch),
@@ -285,14 +304,53 @@ export function AdminDashboard({ domain }: Props) {
           await loadStudents(selectedClassId);
         }}
         onDeleteStudent={async (id) => {
-          await fetchJson(`/api/admin/students/${id}`, { method: "DELETE" });
+          await fetchJson(buildUrl(`/api/admin/students/${id}`), { method: "DELETE" });
           report("Student removed.");
           await loadStudents(selectedClassId);
         }}
       />
 
+      <div style={{ display: "grid", gap: "0.5rem" }}>
+        {isSuperAdminView && impersonatedDomain && (
+          <div
+            style={{
+              padding: "0.85rem 1rem",
+              borderRadius: "12px",
+              background: "#ecfeff",
+              border: "1px solid #0f766e",
+              color: "#0f172a",
+            }}
+          >
+            Super Admin view · managing {impersonatedDomain}. {" "}
+            <a href="/super-admin" style={{ color: "#0f766e", fontWeight: 600 }}>Exit to Super Admin console</a>
+          </div>
+        )}
+        {optionsDomain && (
+          <p style={{ margin: 0, color: "#475569" }}>
+            Customising options for domain <strong>{optionsDomain}</strong>
+          </p>
+        )}
+        <OptionManager
+          options={incidentOptions}
+          saving={savingOptions}
+          onSave={async (payload) => {
+            setSavingOptions(true);
+            await fetchJson(buildUrl("/api/admin/options"), {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(impersonatedDomain ? { ...payload, domain: impersonatedDomain } : payload),
+            });
+            setSavingOptions(false);
+            report("Incident options updated.");
+            await loadIncidentOptions();
+          }}
+        />
+      </div>
+
+      <IncidentControls initialRetention={retentionDays} />
+
       <footer style={{ textAlign: "center", color: "#94a3b8", fontSize: "0.85rem" }}>
-        TrackTally admin · Workspace domain: {domain}
+        TrackTally admin · Workspace domain: {domain} - ABN 96 110 054 130
       </footer>
     </div>
   );

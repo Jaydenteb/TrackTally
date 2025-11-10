@@ -13,7 +13,75 @@ declare global {
   interface Window {
     webkitSpeechRecognition?: any;
     SpeechRecognition?: any;
+    TrackTallyNative?: {
+      startDictation: () => Promise<void> | void;
+      stopDictation?: () => Promise<void> | void;
+    };
   }
+}
+
+type NativeEventDetail = {
+  event: "dictationPartial" | "dictationResult" | "dictationError";
+  payload?: string;
+};
+
+function supportsNativeDictation() {
+  return typeof window !== "undefined" && !!window.TrackTallyNative?.startDictation;
+}
+
+function startNativeDictation(callbacks: DictationCallbacks): DictationController {
+  if (!supportsNativeDictation()) return null;
+  const handler = (event: Event) => {
+    if (!(event instanceof CustomEvent)) return;
+    const detail = event.detail as NativeEventDetail;
+    if (!detail || typeof detail.event !== "string") return;
+    if (detail.event === "dictationResult") {
+      const text = typeof detail.payload === "string" ? detail.payload.trim() : "";
+      if (text) {
+        callbacks.onResult(text);
+      }
+      return;
+    }
+    if (detail.event === "dictationError") {
+      const message =
+        typeof detail.payload === "string" && detail.payload.trim()
+          ? detail.payload.trim()
+          : "Dictation error";
+      callbacks.onError(message);
+    }
+  };
+
+  window.addEventListener("tracktally-native", handler as EventListener);
+
+  try {
+    const result = window.TrackTallyNative?.startDictation();
+    if (result instanceof Promise) {
+      result.catch((error) => {
+        window.removeEventListener("tracktally-native", handler as EventListener);
+        callbacks.onError(
+          error instanceof Error ? error.message : "Unable to start dictation.",
+        );
+      });
+    }
+  } catch (error) {
+    window.removeEventListener("tracktally-native", handler as EventListener);
+    callbacks.onError(error instanceof Error ? error.message : "Unable to start dictation.");
+    return null;
+  }
+
+  return {
+    stop: () => {
+      window.removeEventListener("tracktally-native", handler as EventListener);
+      try {
+        const stopResult = window.TrackTallyNative?.stopDictation?.();
+        if (stopResult instanceof Promise) {
+          stopResult.catch(() => {});
+        }
+      } catch {
+        // ignore stop errors
+      }
+    },
+  };
 }
 
 export function startDictation({
@@ -21,6 +89,11 @@ export function startDictation({
   onError,
 }: DictationCallbacks): DictationController {
   if (typeof window === "undefined") return null;
+
+  const nativeController = startNativeDictation({ onResult, onError });
+  if (nativeController) {
+    return nativeController;
+  }
 
   const RecognitionCtor =
     window.SpeechRecognition || window.webkitSpeechRecognition;
