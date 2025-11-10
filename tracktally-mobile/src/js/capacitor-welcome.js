@@ -1,5 +1,6 @@
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Camera } from '@capacitor/camera';
+import '../native-bridge';
 
 window.customElements.define(
   'capacitor-welcome',

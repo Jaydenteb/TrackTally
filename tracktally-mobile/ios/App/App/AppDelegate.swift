@@ -34,8 +34,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
+        // Handle tracktally://auth-complete?transfer=... URLs
+        if url.scheme == "tracktally", url.host == "auth-complete" {
+            if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let transferToken = components.queryItems?.first(where: { $0.name == "transfer" })?.value,
+               let serverURL = URL(string: "https://tracktally-staging.vercel.app/api/mobile/auth/session?transfer=\(transferToken)") {
+
+                // Load the session endpoint in the WebView to complete authentication
+                DispatchQueue.main.async {
+                    if let bridge = self.window?.rootViewController as? CAPBridgeViewController {
+                        bridge.webView?.load(URLRequest(url: serverURL))
+                    }
+                }
+                return true
+            }
+        }
+
+        // Default handling for other URLs
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
