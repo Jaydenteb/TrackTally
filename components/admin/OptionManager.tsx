@@ -5,6 +5,8 @@ export type IncidentOptionGroups = {
   categories: string[];
   locations: string[];
   actions: string[];
+  commendationLevels?: string[];
+  commendationCategories?: string[];
 };
 
 const groupMeta: Array<{
@@ -12,10 +14,12 @@ const groupMeta: Array<{
   label: string;
   help: string;
 }> = [
-  { key: "levels", label: "Levels", help: "e.g. Minor, Moderate, Major" },
-  { key: "categories", label: "Categories", help: "Behaviour tags teachers pick." },
+  { key: "levels", label: "Incident Levels", help: "e.g. Minor, Moderate, Major" },
+  { key: "categories", label: "Incident Categories", help: "Behaviour tags teachers pick for negative incidents." },
   { key: "locations", label: "Locations", help: "Available places where incidents occur." },
   { key: "actions", label: "Actions taken", help: "Follow-up steps staff can record." },
+  { key: "commendationLevels", label: "Commendation Levels", help: "e.g. Notable, Exceptional" },
+  { key: "commendationCategories", label: "Commendation Categories", help: "Positive recognition types (e.g. Helping others, Leadership, Excellent work)." },
 ];
 
 function toTextareaValue(values: string[]) {
@@ -41,11 +45,17 @@ export function OptionManager({ options, saving, onSave }: Props) {
     categories: [],
     locations: [],
     actions: [],
+    commendationLevels: [],
+    commendationCategories: [],
   });
 
   useEffect(() => {
     if (options) {
-      setDraft(options);
+      setDraft({
+        ...options,
+        commendationLevels: options.commendationLevels ?? [],
+        commendationCategories: options.commendationCategories ?? [],
+      });
     }
   }, [options]);
 
@@ -85,7 +95,7 @@ export function OptionManager({ options, saving, onSave }: Props) {
               {group.label}
             </label>
             <textarea
-              value={toTextareaValue(draft[group.key])}
+              value={toTextareaValue(draft[group.key] ?? [])}
               onChange={(event) => handleChange(group.key, event.target.value)}
               rows={4}
               style={{
