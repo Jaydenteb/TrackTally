@@ -314,10 +314,26 @@ export function LoggerApp({
     );
   }, [classSearch, currentClass]);
 
+  const activeStepOrder = useMemo(() => {
+    if (type === "commendation") {
+      return ["students", "type", "category", "location", "note"] as const;
+    }
+    return STEP_ORDER;
+  }, [type]);
+
   const maxUnlockedStep = useMemo(() => {
     let unlocked = 0;
     if (selectedStudents.length) unlocked = 1;
     if (unlocked >= 1 && type) unlocked = 2;
+
+    // For commendations: skip level and action steps
+    if (type === "commendation") {
+      if (unlocked >= 2 && category) unlocked = 3;
+      if (unlocked >= 3 && location) unlocked = 4;
+      return unlocked;
+    }
+
+    // For incidents: require all fields
     if (unlocked >= 2 && level) unlocked = 3;
     if (unlocked >= 3 && category) unlocked = 4;
     if (unlocked >= 4 && location) unlocked = 5;
@@ -337,10 +353,10 @@ export function LoggerApp({
     }
   }, [selectedStudents.length, currentStepIndex]);
 
-  const currentStep = STEP_ORDER[currentStepIndex];
-  const isFinalStep = currentStepIndex === STEP_ORDER.length - 1;
+  const currentStep = activeStepOrder[currentStepIndex];
+  const isFinalStep = currentStepIndex === activeStepOrder.length - 1;
   const canProceed = currentStepIndex < maxUnlockedStep;
-  const stepCount = STEP_ORDER.length;
+  const stepCount = activeStepOrder.length;
 
   useEffect(() => {
     if (!classes.length) return;
@@ -611,32 +627,37 @@ export function LoggerApp({
   const handleSubmit = useCallback(async () => {
     if (!selectedStudents.length) {
       setToast("Pick at least one student.");
-      setCurrentStepIndex(STEP_ORDER.indexOf("students"));
+      setCurrentStepIndex(activeStepOrder.indexOf("students"));
       return;
     }
     if (!type) {
       setToast("Choose incident or commendation.");
-      setCurrentStepIndex(STEP_ORDER.indexOf("type"));
+      setCurrentStepIndex(activeStepOrder.indexOf("type"));
       return;
     }
-    if (!level) {
-      setToast("Select a level.");
-      setCurrentStepIndex(STEP_ORDER.indexOf("level"));
-      return;
+
+    // Only validate level and action for incidents
+    if (type === "incident") {
+      if (!level) {
+        setToast("Select a level.");
+        setCurrentStepIndex(STEP_ORDER.indexOf("level"));
+        return;
+      }
+      if (!actionTaken) {
+        setToast("Select an action.");
+        setCurrentStepIndex(STEP_ORDER.indexOf("action"));
+        return;
+      }
     }
+
     if (!category) {
       setToast("Choose a category.");
-      setCurrentStepIndex(STEP_ORDER.indexOf("category"));
+      setCurrentStepIndex(activeStepOrder.indexOf("category"));
       return;
     }
     if (!location) {
       setToast("Choose a location.");
-      setCurrentStepIndex(STEP_ORDER.indexOf("location"));
-      return;
-    }
-    if (!actionTaken) {
-      setToast("Select an action.");
-      setCurrentStepIndex(STEP_ORDER.indexOf("action"));
+      setCurrentStepIndex(activeStepOrder.indexOf("location"));
       return;
     }
     setIsSubmitting(true);
@@ -658,10 +679,10 @@ export function LoggerApp({
           type,
           studentId: student.studentId,
           studentName: student.name,
-          level,
+          level: type === "commendation" ? "Notable" : level,
           category,
           location,
-          actionTaken,
+          actionTaken: type === "commendation" ? "Recognized" : actionTaken,
           note,
           classCode: currentClass.code,
           device: deviceInfo,
@@ -720,6 +741,7 @@ export function LoggerApp({
     setClassSearch("");
   }, [
     actionTaken,
+    activeStepOrder,
     category,
     currentClass,
     level,
