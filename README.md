@@ -2,6 +2,8 @@
 
 TrackTally is a Next.js 15 PWA that records classroom behaviour incidents directly into Google Sheets. It is optimised for mobile, works offline, and now includes a Google Workspace–protected admin console for managing classes, teachers, and student rosters.
 
+**Current Status**: ✅ **Ready for Demo & Testing** (1-2 schools, January 2025)
+
 ## Features
 
 - Fast logger UI with bulk student selection, quick level/category chips, and speech-to-text notes.
@@ -12,7 +14,19 @@ TrackTally is a Next.js 15 PWA that records classroom behaviour incidents direct
 - Optional SMTP notifications when incidents target students from another class (emails the homeroom teacher).
 - Incident audit log stored in the database (and still appended to Google Sheets) to enable analytics and reliable history.
 - Customisable incident options per school (levels, categories, locations, actions) managed by admins and overseen by a global Super Admin.
-- Multi-tenant isolation: each school is backed by its own `Organization` record in Postgres, and every class/teacher/student/incident row is scoped to that organization. Super Admins can impersonate a school’s admin console without leaking data across schools.
+- Multi-tenant isolation: each school is backed by its own `Organization` record in Postgres, and every class/teacher/student/incident row is scoped to that organization. Super Admins can impersonate a school's admin console without leaking data across schools.
+
+## Recent Updates (January 2025)
+
+### ✅ Pre-Production Security & Stability Fixes Completed
+- **Domain Authorization**: Fixed security issue where missing `ALLOWED_GOOGLE_DOMAIN` allowed any Google account (now fails closed)
+- **Mobile Auth Cleanup**: Automated cron job to prune expired mobile auth tickets (runs daily at 2 AM)
+- **Test Suite**: Added Vitest with critical path tests for multi-tenant isolation, auth flows, and incident validation
+- **Audit Logging**: Implemented audit trail for admin actions (create/update students, classrooms, teachers)
+- **Error Boundaries**: Added React error boundaries to prevent app crashes during testing
+- **Backup Documentation**: Comprehensive backup/restore procedures documented in `docs/ops/backup-restore.md`
+
+**See**: `IMPLEMENTATION-SUMMARY.md` for complete implementation details and testing checklist.
 
 ## Priority: Super Admin & Multi‑Tenant Auth
 
@@ -113,11 +127,47 @@ behaviour-logger
 
 ```bash
 npm install
-npx prisma migrate dev --name init   # creates prisma/tracktally.db
+npx prisma migrate dev --name init   # creates migrations
 npx prisma generate                  # regenerates @prisma/client (stop dev server first if locked)
 ```
 
-4. Run `npm run dev`. After authenticating with Google you will land in the teacher logger (admins can browse to `/admin`).
+4. Run tests (optional but recommended):
+
+```bash
+npm test              # Run all tests
+npm run test:ui       # Run with visual UI
+npm run test:coverage # Generate coverage report
+```
+
+5. Run `npm run dev`. After authenticating with Google you will land in the teacher logger (admins can browse to `/admin`).
+
+### Important: First-Time Setup
+
+After first deployment, you MUST create an organization and assign users:
+
+1. **Add yourself as super admin** (in Vercel env vars):
+   ```
+   SUPER_ADMIN_EMAILS=your-email@domain.com
+   ```
+
+2. **Set domain restriction** (recommended):
+   ```
+   ALLOWED_GOOGLE_DOMAIN=yourdomain.edu
+   ```
+
+3. **Create your first organization**:
+   - Sign in and go to `/super-admin`
+   - Click "Create Organization"
+   - Enter school name and email domain (e.g., "yourdomain.edu")
+   - This enables teachers from that domain to sign in
+
+4. **Sign out and sign back in** - Your account will auto-assign to the new organization
+
+5. **Verify cron jobs** - Check Vercel dashboard for scheduled cleanup job
+
+**Important**: Teachers cannot log incidents until they are assigned to an organization. Either:
+- Create organization matching their email domain, OR
+- Add them to `SUPER_ADMIN_EMAILS` for testing (they can then create orgs)
 ## Google Sheets
 
 1. Create **Behaviour Logs** sheet, tab **Incidents**, header row (A1–L1):
@@ -141,23 +191,58 @@ npx prisma generate                  # regenerates @prisma/client (stop dev serv
 
 ## Testing checklist
 
-1. Sign in using an approved Workspace account (others should be rejected).
-2. Log an incident → expect “Logged” toast + row in Google Sheets.
-3. Test offline submission → entry queued, auto-flush on reconnect.
-4. Try mic dictation (iOS Safari / Chrome).
-5. Switch classes via quick-find and verify roster persists.
-6. Admin tasks: create class, seed sample students, import CSV, assign teachers, edit/move students.
-7. `GET /api/health` → `{ "ok": true }`.
+### Pre-Deployment Verification
+1. Run `npm test` - All tests pass
+2. Run `npm run build` - Builds without errors
+3. Verify `vercel.json` exists (cron configuration)
+4. Check all required env vars set in Vercel
+
+### After Deployment
+1. Verify cron job scheduled in Vercel dashboard
+2. Sign in using an approved Workspace account (others should be rejected)
+3. Create organization via `/super-admin` if not exists
+4. Sign out and back in to get organization assigned
+
+### Functional Testing
+1. Log an incident → expect "Logged" toast + row in Google Sheets
+2. Test offline submission → entry queued, auto-flush on reconnect
+3. Try mic dictation (iOS Safari / Chrome)
+4. Switch classes via quick-find and verify roster persists
+5. Admin tasks: create class, seed sample students, import CSV, assign teachers, edit/move students
+6. Verify audit logs created: `SELECT * FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 10;`
+7. Test error boundary: Intentionally trigger error, verify friendly message shown
+8. `GET /api/health` → `{ "ok": true }`
+
+### PWA Testing (Mobile Demo)
+1. **iOS Safari**: Add to Home Screen, verify app icon appears
+2. **Android Chrome**: Install app, verify in app drawer
+3. **Offline mode**: Turn off wifi, log incident, verify queued
+4. **Online sync**: Turn wifi on, verify queued incident uploads
+5. **Performance**: Time how fast to log one incident (target: <30 seconds)
+
+### Multi-Tenant Isolation Testing
+1. Create 2 test organizations with different domains
+2. Create test users for each organization
+3. Verify School A teacher cannot see School B's:
+   - Incidents
+   - Students
+   - Classrooms
+   - Teachers
+4. Verify super admin can see both (when impersonating)
 
 ## Implementation notes
 
 - `lib/prisma.ts` caches Prisma client in dev; NextAuth callbacks use Prisma to ensure teacher records exist and to read roles (admins bootstrap from `ADMIN_EMAILS`).
 - `/api/admin/*` routes call `requireAdmin`, ensuring only admins mutate data.
+- **Security**: Domain authorization now fails closed - if `ALLOWED_GOOGLE_DOMAIN` is not set, sign-ins are rejected (changed Jan 2025).
+- **Audit logging**: Admin actions logged to `AuditLog` table via `lib/audit.ts` utility.
+- **Error handling**: Error boundaries wrap app in `app/layout.tsx` to prevent crashes from uncaught React errors.
+- **Cron jobs**: Mobile auth ticket cleanup runs daily at 2 AM via Vercel Cron (see `vercel.json`).
 - Service worker unregistered in dev to avoid stale `_next` assets; prod registers `/sw`.
 - Logger handles network errors gracefully, displaying toast feedback without crashing.
 - `lib/mailer.ts` sends optional notification emails via SMTP when incidents involve students from another class (skips automatically if SMTP env vars are missing).
 - `/api/log-incident` upserts each incident into the DB first (idempotent on `uuid`), then appends to Sheets. If DB write fails, it continues to Sheets.
-- Planned contract change: the client will stop sending `teacherEmail`; the server will derive it from the authenticated session to prevent spoofing and simplify the client.
+- **Organization requirement**: All teachers/admins must have an `organizationId` assigned to log incidents or access admin routes (403 Forbidden if missing).
 
 ## SpellTally platform integration plan
 
@@ -374,6 +459,36 @@ Based on a comprehensive code review conducted January 2025, the following actio
 - CSV Imports: 10K+ row files
 
 **Recommendation**: Don't optimize prematurely. Your current architecture is fine for 1-2 schools.
+
+---
+
+## Troubleshooting
+
+### 403 Forbidden on /api/log-incident
+**Cause**: User's `organizationId` is null
+**Fix**: Either:
+1. Add user to `SUPER_ADMIN_EMAILS` (bypasses org requirement), OR
+2. Create organization matching user's email domain via `/super-admin`, then sign out/in
+
+### Admin routes returning 403
+**Cause**: User role is not "admin" or "superadmin"
+**Fix**: Add email to `ADMIN_EMAILS` or `SUPER_ADMIN_EMAILS` env var, redeploy, sign out/in
+
+### Incidents not appearing in Sheets
+**Cause**: Missing or incorrect Sheets credentials
+**Fix**: Verify `SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` are set correctly
+
+### PWA not installing on iOS
+**Cause**: Must use Safari browser (not Chrome)
+**Fix**: Open in Safari, use Share → Add to Home Screen
+
+### Offline queue not syncing
+**Cause**: IndexedDB not available or service worker issues
+**Fix**: Check browser console for errors, ensure HTTPS (required for service workers)
+
+### Tests failing
+**Cause**: Dependencies not installed or Prisma not generated
+**Fix**: Run `npm install` and `npx prisma generate`, then `npm test`
 
 ---
 

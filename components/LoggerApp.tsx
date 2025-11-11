@@ -34,6 +34,7 @@ type ClassData = {
 };
 
 type IncidentPayload = {
+  type: string;
   studentId: string;
   studentName: string;
   level: string;
@@ -52,6 +53,8 @@ type IncidentOptionGroups = {
   categories: string[];
   locations: string[];
   actions: string[];
+  commendationLevels?: string[];
+  commendationCategories?: string[];
 };
 
 const LEVELS = ["Minor", "Major"] as const;
@@ -83,6 +86,7 @@ const DEFAULT_INCIDENT_OPTIONS: IncidentOptionGroups = {
 
 const STEP_ORDER = [
   "students",
+  "type",
   "level",
   "category",
   "location",
@@ -94,6 +98,7 @@ type StepKey = (typeof STEP_ORDER)[number];
 
 const STEP_TITLES: Record<StepKey, string> = {
   students: "Choose students",
+  type: "Record type",
   level: "Pick level",
   category: "Tag category",
   location: "Set location",
@@ -101,13 +106,29 @@ const STEP_TITLES: Record<StepKey, string> = {
   note: "Add context",
 };
 
-const STEP_DESCRIPTIONS: Record<StepKey, string> = {
-  students: "Select who is involved. Bulk select lets you tag multiple learners.",
-  level: "Is this a minor or major behaviour incident?",
-  category: "Label the behaviour so trends stay clear.",
-  location: "Where did this happen?",
-  action: "Document the response taken.",
-  note: "Optional context for the team (voice dictation supported).",
+const getStepDescription = (step: StepKey, recordType: string): string => {
+  switch (step) {
+    case "students":
+      return "Select who is involved. Bulk select lets you tag multiple learners.";
+    case "type":
+      return "Is this an incident or a commendation?";
+    case "level":
+      return recordType === "commendation"
+        ? "How notable is this positive behavior?"
+        : "Is this a minor or major behaviour incident?";
+    case "category":
+      return recordType === "commendation"
+        ? "What type of positive behavior is this?"
+        : "Label the behaviour so trends stay clear.";
+    case "location":
+      return "Where did this happen?";
+    case "action":
+      return "Document the response taken.";
+    case "note":
+      return "Optional context for the team (voice dictation supported).";
+    default:
+      return "";
+  }
 };
 
 type Props = {
@@ -128,6 +149,7 @@ export function LoggerApp({
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [isBulkMode, setIsBulkMode] = useState(false);
+  const [type, setType] = useState<string>("");
   const [level, setLevel] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [location, setLocation] = useState<string>("");
@@ -295,12 +317,13 @@ export function LoggerApp({
   const maxUnlockedStep = useMemo(() => {
     let unlocked = 0;
     if (selectedStudents.length) unlocked = 1;
-    if (unlocked >= 1 && level) unlocked = 2;
-    if (unlocked >= 2 && category) unlocked = 3;
-    if (unlocked >= 3 && location) unlocked = 4;
-    if (unlocked >= 4 && actionTaken) unlocked = 5;
+    if (unlocked >= 1 && type) unlocked = 2;
+    if (unlocked >= 2 && level) unlocked = 3;
+    if (unlocked >= 3 && category) unlocked = 4;
+    if (unlocked >= 4 && location) unlocked = 5;
+    if (unlocked >= 5 && actionTaken) unlocked = 6;
     return unlocked;
-  }, [selectedStudents.length, level, category, location, actionTaken]);
+  }, [selectedStudents.length, type, level, category, location, actionTaken]);
 
   useEffect(() => {
     if (currentStepIndex > maxUnlockedStep) {
@@ -424,6 +447,14 @@ export function LoggerApp({
           : [...prev, studentId];
       }
       return prev[0] === studentId ? [] : [studentId];
+    });
+  };
+
+  const handleTypeSelect = (option: string) => {
+    setType(option);
+    setCurrentStepIndex((prev) => {
+      const target = STEP_ORDER.indexOf("level");
+      return prev < target ? target : prev;
     });
   };
 
@@ -583,6 +614,11 @@ export function LoggerApp({
       setCurrentStepIndex(STEP_ORDER.indexOf("students"));
       return;
     }
+    if (!type) {
+      setToast("Choose incident or commendation.");
+      setCurrentStepIndex(STEP_ORDER.indexOf("type"));
+      return;
+    }
     if (!level) {
       setToast("Select a level.");
       setCurrentStepIndex(STEP_ORDER.indexOf("level"));
@@ -619,6 +655,7 @@ export function LoggerApp({
         const student = currentClass.students.find((s) => s.id === studentId);
         if (!student) return null;
         return {
+          type,
           studentId: student.studentId,
           studentName: student.name,
           level,
@@ -674,6 +711,7 @@ export function LoggerApp({
     setCurrentStepIndex(0);
     setSelectedStudents([]);
     setIsBulkMode(false);
+    setType("");
     setLevel("");
     setCategory("");
     setLocation("");
@@ -689,6 +727,7 @@ export function LoggerApp({
     note,
     processQueue,
     refreshQueueCount,
+    type,
     selectedStudents,
     sendIncident,
   ]);
@@ -826,12 +865,43 @@ export function LoggerApp({
             </section>
           </>
         );
+      case "type":
+        return (
+          <section>
+            <p className={styles.sectionTitle}>Record type</p>
+            <div className={styles.chipGroup}>
+              <button
+                type="button"
+                className={`${styles.chip} ${
+                  type === "incident" ? styles.chipSelected : ""
+                }`}
+                onClick={() => handleTypeSelect("incident")}
+              >
+                Incident
+              </button>
+              <button
+                type="button"
+                className={`${styles.chip} ${
+                  type === "commendation" ? styles.chipSelected : ""
+                }`}
+                onClick={() => handleTypeSelect("commendation")}
+              >
+                Commendation
+              </button>
+            </div>
+          </section>
+        );
       case "level":
         return (
           <section>
-            <p className={styles.sectionTitle}>Level</p>
+            <p className={styles.sectionTitle}>
+              {type === "commendation" ? "Impact" : "Level"}
+            </p>
             <div className={styles.chipGroup}>
-              {incidentOptions.levels.map((option) => (
+              {(type === "commendation"
+                ? incidentOptions.commendationLevels || []
+                : incidentOptions.levels
+              ).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -849,9 +919,14 @@ export function LoggerApp({
       case "category":
         return (
           <section>
-            <p className={styles.sectionTitle}>Category</p>
+            <p className={styles.sectionTitle}>
+              {type === "commendation" ? "Recognition type" : "Category"}
+            </p>
             <div className={styles.chipGroup}>
-              {incidentOptions.categories.map((option) => (
+              {(type === "commendation"
+                ? incidentOptions.commendationCategories || []
+                : incidentOptions.categories
+              ).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -1054,7 +1129,7 @@ export function LoggerApp({
             Step {currentStepIndex + 1} of {stepCount}
           </div>
           <div className={styles.stepTitle}>{STEP_TITLES[currentStep]}</div>
-          <p className={styles.stepDescription}>{STEP_DESCRIPTIONS[currentStep]}</p>
+          <p className={styles.stepDescription}>{getStepDescription(currentStep, type)}</p>
         </div>
 
         <div

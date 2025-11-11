@@ -6,6 +6,8 @@ export type IncidentOptionGroups = {
   categories: string[];
   locations: string[];
   actions: string[];
+  commendationLevels?: string[];
+  commendationCategories?: string[];
 };
 
 export const DEFAULT_INCIDENT_OPTIONS: IncidentOptionGroups = {
@@ -22,6 +24,17 @@ export const DEFAULT_INCIDENT_OPTIONS: IncidentOptionGroups = {
   ],
   locations: ["Classroom", "Yard", "Specialist", "Transition", "Online"],
   actions: ["Redirect", "Time out", "Restorative chat", "Parent contact", "Office referral"],
+  commendationLevels: ["Notable", "Exceptional"],
+  commendationCategories: [
+    "Excellent work",
+    "Helping others",
+    "Leadership",
+    "Improvement",
+    "Positive attitude",
+    "Kindness",
+    "Responsibility",
+    "Other",
+  ],
 };
 
 const OPTION_PREFIX = "org-options:";
@@ -39,6 +52,8 @@ export function normalizeOptions(options?: Partial<IncidentOptionGroups>): Incid
   const normalizedCategories = normalizeList(options?.categories);
   const normalizedLocations = normalizeList(options?.locations);
   const normalizedActions = normalizeList(options?.actions);
+  const normalizedCommendationLevels = normalizeList(options?.commendationLevels);
+  const normalizedCommendationCategories = normalizeList(options?.commendationCategories);
 
   return {
     levels: normalizedLevels.length ? normalizedLevels : [...DEFAULT_INCIDENT_OPTIONS.levels],
@@ -51,6 +66,12 @@ export function normalizeOptions(options?: Partial<IncidentOptionGroups>): Incid
     actions: normalizedActions.length
       ? normalizedActions
       : [...DEFAULT_INCIDENT_OPTIONS.actions],
+    commendationLevels: normalizedCommendationLevels.length
+      ? normalizedCommendationLevels
+      : [...(DEFAULT_INCIDENT_OPTIONS.commendationLevels ?? [])],
+    commendationCategories: normalizedCommendationCategories.length
+      ? normalizedCommendationCategories
+      : [...(DEFAULT_INCIDENT_OPTIONS.commendationCategories ?? [])],
   };
 }
 

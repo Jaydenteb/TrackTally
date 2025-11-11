@@ -70,6 +70,7 @@ model Incident {
   id           String     @id @default(cuid())
   uuid         String     @unique
   timestamp    DateTime   @default(now())
+  type         String     @default("incident") // "incident" | "commendation"
   // Optional relation to Student by unique studentId; keeps write resilient if roster is missing
   studentId    String?
   student      Student?   @relation("StudentIncidents", fields: [studentId], references: [studentId])
@@ -92,6 +93,7 @@ model Incident {
   @@index([timestamp])
   @@index([teacherEmail])
   @@index([classroomId])
+  @@index([type])
 }
 
 model Setting {

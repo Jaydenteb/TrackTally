@@ -181,6 +181,7 @@ export async function POST(request: Request) {
         create: {
           uuid,
           timestamp: new Date(timestamp),
+          type: data.type || "incident",
           studentId: studentRecord ? studentRecord.studentId : null,
           studentName: data.studentName,
           classroomId: classroomRecord?.id ?? null,
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
     }
 
     // 2) Append to Google Sheets (source of truth for MVP)
-    await appendIncidentRow({
+    const sheetRow = {
       timestamp,
       studentId: data.studentId,
       studentName: data.studentName,
@@ -213,7 +214,14 @@ export async function POST(request: Request) {
       classCode: data.classCode ?? "",
       device,
       uuid,
-    });
+    };
+
+    if (data.type === "commendation") {
+      const { appendCommendationRow } = await import("../../../lib/sheets");
+      await appendCommendationRow(sheetRow);
+    } else {
+      await appendIncidentRow(sheetRow);
+    }
 
     if (data.studentId) {
       try {

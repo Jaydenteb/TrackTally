@@ -9,6 +9,7 @@ describe("Incident Validation & Creation", () => {
   describe("Input Validation", () => {
     it("should validate valid incident data", () => {
       const validIncident = {
+        type: "incident",
         studentId: "12345",
         studentName: "Test Student",
         level: "Minor",
@@ -24,6 +25,41 @@ describe("Incident Validation & Creation", () => {
 
       const result = incidentInputSchema.safeParse(validIncident);
       expect(result.success).toBe(true);
+    });
+
+    it("should validate valid commendation data", () => {
+      const validCommendation = {
+        type: "commendation",
+        studentId: "12345",
+        studentName: "Test Student",
+        level: "Notable",
+        category: "Helping others",
+        location: "Classroom",
+        actionTaken: "Positive note home",
+        note: "Helped a classmate with math",
+        classCode: "5A",
+        device: "iPad",
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
+        timestamp: "2025-01-10T12:00:00Z",
+      };
+
+      const result = incidentInputSchema.safeParse(validCommendation);
+      expect(result.success).toBe(true);
+      expect(result.data?.type).toBe("commendation");
+    });
+
+    it("should default to incident type if not specified", () => {
+      const incidentWithoutType = {
+        studentId: "12345",
+        studentName: "Test Student",
+        level: "Minor",
+        category: "Disruption",
+        location: "Classroom",
+      };
+
+      const result = incidentInputSchema.safeParse(incidentWithoutType);
+      expect(result.success).toBe(true);
+      expect(result.data?.type).toBe("incident");
     });
 
     it("should reject incident with missing required fields", () => {
@@ -205,6 +241,39 @@ describe("Incident Validation & Creation", () => {
         const result = incidentInputSchema.safeParse(incident);
         expect(result.success).toBe(true);
       });
+    });
+
+    it("should accept valid record types", () => {
+      const types = ["incident", "commendation"];
+
+      types.forEach((type) => {
+        const record = {
+          type,
+          studentId: "12345",
+          studentName: "Test Student",
+          level: "Minor",
+          category: type === "commendation" ? "Helping others" : "Disruption",
+          location: "Classroom",
+        };
+
+        const result = incidentInputSchema.safeParse(record);
+        expect(result.success).toBe(true);
+        expect(result.data?.type).toBe(type);
+      });
+    });
+
+    it("should reject invalid record types", () => {
+      const record = {
+        type: "unknown-type",
+        studentId: "12345",
+        studentName: "Test Student",
+        level: "Minor",
+        category: "Disruption",
+        location: "Classroom",
+      };
+
+      const result = incidentInputSchema.safeParse(record);
+      expect(result.success).toBe(false);
     });
   });
 });

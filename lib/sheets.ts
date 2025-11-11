@@ -59,12 +59,55 @@ export interface IncidentRow {
   uuid: string;
 }
 
+export interface CommendationRow {
+  timestamp: string;
+  studentId: string;
+  studentName: string;
+  level: string;
+  category: string;
+  location: string;
+  actionTaken: string;
+  note: string;
+  teacherEmail: string;
+  classCode: string;
+  device: string;
+  uuid: string;
+}
+
 export async function appendIncidentRow(row: IncidentRow) {
   const sheets = getSheetsClient();
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID!,
     range: "Incidents!A:L",
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [
+        [
+          row.timestamp,
+          row.studentId,
+          row.studentName,
+          row.level,
+          row.category,
+          row.location,
+          row.actionTaken,
+          row.note,
+          row.teacherEmail,
+          row.classCode,
+          row.device,
+          row.uuid,
+        ],
+      ],
+    },
+  });
+}
+
+export async function appendCommendationRow(row: CommendationRow) {
+  const sheets = getSheetsClient();
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID!,
+    range: "Commendations!A:L",
     valueInputOption: "USER_ENTERED",
     requestBody: {
       values: [

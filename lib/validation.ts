@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const HTML_TAG_REGEX = /<[^>]*>?/g;
 
+const TYPE_VALUES = ["incident", "commendation"] as const;
+
 const LEVEL_VALUES = ["Minor", "Major"] as const;
 const CATEGORY_VALUES = [
   "Disruption",
@@ -22,15 +24,34 @@ const ACTION_VALUES = [
   "Office referral",
 ] as const;
 
+// Commendation-specific values
+const COMMENDATION_LEVEL_VALUES = ["Notable", "Exceptional"] as const;
+const COMMENDATION_CATEGORY_VALUES = [
+  "Excellent work",
+  "Helping others",
+  "Leadership",
+  "Improvement",
+  "Positive attitude",
+  "Kindness",
+  "Responsibility",
+  "Other",
+] as const;
+
+export const typeSchema = z.enum(TYPE_VALUES);
 export const levelSchema = z.enum(LEVEL_VALUES);
 export const categorySchema = z.enum(CATEGORY_VALUES);
 export const locationSchema = z.enum(LOCATION_VALUES);
 export const actionSchema = z.enum(ACTION_VALUES);
+export const commendationLevelSchema = z.enum(COMMENDATION_LEVEL_VALUES);
+export const commendationCategorySchema = z.enum(COMMENDATION_CATEGORY_VALUES);
 
+export type BehaviorType = (typeof TYPE_VALUES)[number];
 export type BehaviorLevel = (typeof LEVEL_VALUES)[number];
 export type BehaviorCategory = (typeof CATEGORY_VALUES)[number];
 export type BehaviorLocation = (typeof LOCATION_VALUES)[number];
 export type BehaviorAction = (typeof ACTION_VALUES)[number];
+export type CommendationLevel = (typeof COMMENDATION_LEVEL_VALUES)[number];
+export type CommendationCategory = (typeof COMMENDATION_CATEGORY_VALUES)[number];
 
 function stripHtml(value: string) {
   return value.replace(HTML_TAG_REGEX, "").trim();
@@ -48,10 +69,11 @@ export function sanitizeOptional(value: unknown): string | undefined {
 }
 
 export const incidentInputSchema = z.object({
+  type: typeSchema.default("incident"),
   studentId: z.string().trim().min(1).max(64),
   studentName: z.string().trim().min(1).max(120),
-  level: levelSchema,
-  category: categorySchema,
+  level: z.string().trim().min(1).max(32), // Flexible to allow both incident and commendation levels
+  category: z.string().trim().min(1).max(64), // Flexible to allow both incident and commendation categories
   location: locationSchema,
   actionTaken: z.string().trim().max(120).optional().nullable(),
   note: z.string().trim().max(600).optional().nullable(),
