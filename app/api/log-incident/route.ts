@@ -24,6 +24,7 @@ const REQUIRED_FIELDS = [
 const MAX_BYTES = 10 * 1024;
 
 type IncidentPayload = {
+  type?: string;
   studentId: string;
   studentName: string;
   level: string;
