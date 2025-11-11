@@ -7,6 +7,7 @@ const STORE_NAME = "offline-incidents";
 const DB_VERSION = 1;
 
 type IncidentPayload = {
+  type?: string;
   studentId: string;
   studentName: string;
   level: string;
