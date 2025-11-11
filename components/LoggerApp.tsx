@@ -34,7 +34,7 @@ type ClassData = {
 };
 
 type IncidentPayload = {
-  type: string;
+  type?: string;
   studentId: string;
   studentName: string;
   level: string;
