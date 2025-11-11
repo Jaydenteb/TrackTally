@@ -249,6 +249,14 @@ export function LoggerApp({
             Array.isArray(data.actions) && data.actions.length
               ? data.actions
               : DEFAULT_INCIDENT_OPTIONS.actions,
+          commendationLevels:
+            Array.isArray(data.commendationLevels) && data.commendationLevels.length
+              ? data.commendationLevels
+              : ["Notable", "Exceptional"],
+          commendationCategories:
+            Array.isArray(data.commendationCategories) && data.commendationCategories.length
+              ? data.commendationCategories
+              : ["Excellent work", "Helping others", "Leadership", "Improvement", "Positive attitude", "Kindness", "Responsibility", "Other"],
         };
         if (!cancelled) {
           setIncidentOptions(normalized);
