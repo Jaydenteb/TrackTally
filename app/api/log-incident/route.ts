@@ -64,6 +64,7 @@ export async function POST(request: Request) {
   }
 
   const data: IncidentPayload = {
+    type: payload.type,
     studentId: sanitize(payload.studentId),
     studentName: sanitize(payload.studentName),
     level: sanitize(payload.level),
