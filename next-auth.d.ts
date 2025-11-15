@@ -8,12 +8,16 @@ declare module "next-auth" {
       image?: string | null;
       role?: "superadmin" | "admin" | "teacher";
       organizationId?: string | null;
+      organizationName?: string | null;
+      organizationDomain?: string | null;
     };
   }
 
   interface User {
     role?: "superadmin" | "admin" | "teacher";
     organizationId?: string | null;
+    organizationName?: string | null;
+    organizationDomain?: string | null;
   }
 }
 
@@ -21,5 +25,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     role?: "superadmin" | "admin" | "teacher";
     organizationId?: string | null;
+    organizationName?: string | null;
+    organizationDomain?: string | null;
   }
 }

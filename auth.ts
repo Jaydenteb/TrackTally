@@ -36,6 +36,9 @@ function isAllowedDomain(email?: string | null, hostedDomain?: string | null) {
 async function getTeacher(email: string) {
   return prisma.teacher.findUnique({
     where: { email },
+    include: {
+      organization: { select: { id: true, name: true, domain: true } },
+    },
   });
 }
 
@@ -205,6 +208,8 @@ if (authConfigured) {
               : "teacher";
         token.name = teacher.displayName ?? token.name;
         token.organizationId = teacher.organizationId ?? null;
+        token.organizationName = teacher.organization?.name ?? null;
+        token.organizationDomain = teacher.organization?.domain ?? null;
         return token;
       },
       async session({ session, token }) {
@@ -218,6 +223,10 @@ if (authConfigured) {
           }
           session.user.organizationId =
             typeof token.organizationId === "string" ? token.organizationId : null;
+          session.user.organizationName =
+            typeof token.organizationName === "string" ? token.organizationName : null;
+          session.user.organizationDomain =
+            typeof token.organizationDomain === "string" ? token.organizationDomain : null;
         }
         return session;
       },
@@ -269,7 +278,6 @@ if (authConfigured) {
 }
 
 export { handlers, authFn as auth, signInFn as signIn, signOutFn as signOut };
-
 
 
 

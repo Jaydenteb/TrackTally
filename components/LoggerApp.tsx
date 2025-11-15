@@ -17,6 +17,8 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import styles from "../app/page.module.css";
 import { flushQueue, getQueueCount, queueIncident } from "../lib/idb";
 import { startDictation } from "../lib/speech";
+import { InstallPwaButton } from "./InstallPwaButton";
+import { usePwaInstall } from "./PwaInstallProvider";
 
 type Student = {
   id: string;
@@ -164,13 +166,37 @@ export function LoggerApp({
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [incidentOptions, setIncidentOptions] =
     useState<IncidentOptionGroups>(DEFAULT_INCIDENT_OPTIONS);
+  const { isIosSafari, isStandalone } = usePwaInstall();
+  const [showIosInstallHint, setShowIosInstallHint] = useState(false);
   const dictationRef = useRef<{ stop: () => void } | null>(null);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
   const stepPanelRef = useRef<HTMLDivElement | null>(null);
   const swipeOrigin = useRef<{ x: number; y: number } | null>(null);
   const role = session?.user?.role ?? "teacher";
   const userEmail = session?.user?.email ?? "";
+  const organizationName = session?.user?.organizationName ?? null;
+  const organizationDomain = session?.user?.organizationDomain ?? null;
   const providerId = "google";
+
+  useEffect(() => {
+    if (!isIosSafari || isStandalone) {
+      setShowIosInstallHint(false);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    const dismissed = window.localStorage.getItem("tt-ios-a2hs-dismissed");
+    setShowIosInstallHint(dismissed !== "true");
+  }, [isIosSafari, isStandalone]);
+
+  const handleDismissIosInstallHint = useCallback(() => {
+    setShowIosInstallHint(false);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem("tt-ios-a2hs-dismissed", "true");
+    } catch {
+      // no-op
+    }
+  }, []);
 
   const loadRoster = useCallback(async () => {
     if (status !== "authenticated") return;
@@ -1128,7 +1154,16 @@ export function LoggerApp({
                 : "Teacher"}{" "}
             - {userEmail || "Unknown user"}
           </span>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.6rem",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
+          >
+            <InstallPwaButton />
             {(role === "admin" || role === "superadmin") && (
               <a href="/admin" className={styles.userAction} style={{ textDecoration: "none" }}>
                 Admin Dashboard
@@ -1147,6 +1182,26 @@ export function LoggerApp({
         <header className={styles.header}>
           <h1 className={styles.heading}>TrackTally</h1>
         </header>
+
+        <div className={styles.orgIndicator}>
+          <div>
+            School:{" "}
+            <strong>{organizationName ?? "Unknown school"}</strong>
+          </div>
+          {organizationDomain && <span>{organizationDomain}</span>}
+        </div>
+
+        {showIosInstallHint && (
+          <div className={styles.iosPrompt}>
+            <span>
+              Install TrackTally on your iPhone: tap the Share icon in Safari and choose{" "}
+              <strong>Add to Home Screen</strong>.
+            </span>
+            <button type="button" onClick={handleDismissIosInstallHint}>
+              Got it
+            </button>
+          </div>
+        )}
 
         {queueCount > 0 && (
           <div className={styles.banner}>

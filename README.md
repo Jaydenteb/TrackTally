@@ -177,9 +177,10 @@ After first deployment, you MUST create an organization and assign users:
 
 ## Admin dashboard
 
-- **Classes**: create/archive, assign homeroom teachers, add specialists, import CSV or “Add sample students”.
+- **Classes**: create/archive, assign homeroom teachers, add specialists, import CSV rosters.
 - **Teachers & Staff**: provision email, set role (teacher/admin), toggle specialist, assign classes, activate/deactivate.
 - **Students**: edit names/IDs/notes/guardians, reassign classes, mark active/inactive.
+- **Data hygiene**: one-click “Remove sample data” button deletes the legacy Bluegum/Koalas classes and S9001–S9010 students for the current school.
 - CSV import now prompts you to map columns (studentId, firstName, lastName, optional guardians) before uploading.
 - **Incidents**: new viewer shows the latest entries (from the DB) with basic details; Sheets remains the flat-file source for exports.
 
@@ -188,6 +189,7 @@ After first deployment, you MUST create an organization and assign users:
 - Fetches rosters via `/api/roster` (admins see all classes; teachers see assigned ones). Quick-find jumps across classes without reloading.
 - Offline queue stores failed submissions; mic button uses Web Speech API (en-AU).
 - Admin link appears in header for quick return to `/admin`.
+- Shows the active school name/domain beside the logger so teachers know which organization they’re operating in.
 
 ## Testing checklist
 
@@ -208,7 +210,7 @@ After first deployment, you MUST create an organization and assign users:
 2. Test offline submission → entry queued, auto-flush on reconnect
 3. Try mic dictation (iOS Safari / Chrome)
 4. Switch classes via quick-find and verify roster persists
-5. Admin tasks: create class, seed sample students, import CSV, assign teachers, edit/move students
+5. Admin tasks: create class, import CSV, assign teachers, edit/move students
 6. Verify audit logs created: `SELECT * FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 10;`
 7. Test error boundary: Intentionally trigger error, verify friendly message shown
 8. `GET /api/health` → `{ "ok": true }`

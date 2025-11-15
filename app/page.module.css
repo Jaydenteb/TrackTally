@@ -18,6 +18,25 @@
   gap: 1.25rem;
 }
 
+.orgIndicator {
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  border: 1px solid #0f766e;
+  background: #ecfeff;
+  color: #0f172a;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.orgIndicator span {
+  color: #0f766e;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
 .header {
   display: flex;
   flex-direction: column;
@@ -160,6 +179,50 @@
   color: #0f766e;
   font-weight: 600;
   cursor: pointer;
+}
+
+.installButton {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  background: #0f766e;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  box-shadow: 0 12px 30px -22px rgba(13, 148, 136, 0.9);
+}
+
+.installButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.iosPrompt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid rgba(251, 146, 60, 0.4);
+}
+
+.iosPrompt button {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: #c2410c;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
 }
 
 .chip {

@@ -1,6 +1,6 @@
 export const runtime = "nodejs";
 
-const PRECACHE_ASSETS = ["/", "/manifest.json"];
+const PRECACHE_ASSETS = ["/", "/teacher", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 const swSource = `
   const CACHE_NAME = "tracktally-shell-v1";

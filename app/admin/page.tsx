@@ -34,6 +34,8 @@ export default async function AdminPage({ searchParams }: Props) {
 
   const impersonatedDomain =
     session.user?.role === "superadmin" ? sanitizeDomain(searchParams?.impersonate) : null;
+  const organizationName = session.user?.organizationName ?? null;
+  const organizationDomain = session.user?.organizationDomain ?? allowedDomain;
 
   return (
     <main
@@ -46,9 +48,13 @@ export default async function AdminPage({ searchParams }: Props) {
       }}
     >
       <AdminDashboard
-        domain={allowedDomain}
+        domain={organizationDomain}
         impersonatedDomain={impersonatedDomain}
         isSuperAdminView={session.user?.role === "superadmin"}
+        initialOrganization={{
+          name: impersonatedDomain ? null : organizationName,
+          domain: impersonatedDomain ?? organizationDomain,
+        }}
       />
     </main>
   );

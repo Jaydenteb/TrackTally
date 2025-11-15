@@ -1,0 +1,16 @@
+﻿<svg width="220" height="64" viewBox="0 0 220 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="word-gradient" x1="0" y1="16" x2="220" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#33D0F5" />
+      <stop offset="1" stop-color="#6D3CFF" />
+    </linearGradient>
+    <filter id="word-shadow" x="-10%" y="-30%" width="120%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(24,34,72,0.15)" />
+    </filter>
+  </defs>
+  <g filter="url(#word-shadow)">
+    <rect x="4" y="8" width="212" height="48" rx="24" fill="url(#word-gradient)" />
+    <text x="112" y="40" text-anchor="middle" fill="#FFFFFF" font-family="'Inter', 'Segoe UI', sans-serif" font-size="28" font-weight="700" letter-spacing="0.02em">SpellTally</text>
+  </g>
+</svg>
+

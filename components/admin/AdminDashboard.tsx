@@ -28,9 +28,15 @@ type Props = {
   domain: string;
   impersonatedDomain?: string | null;
   isSuperAdminView?: boolean;
+  initialOrganization?: { name: string | null; domain: string | null } | null;
 };
 
-export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = false }: Props) {
+export function AdminDashboard({
+  domain,
+  impersonatedDomain,
+  isSuperAdminView = false,
+  initialOrganization = null,
+}: Props) {
   const [classes, setClasses] = useState<ClassRecord[]>([]);
   const [teachers, setTeachers] = useState<TeacherRecord[]>([]);
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -40,6 +46,10 @@ export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = 
   const [optionsDomain, setOptionsDomain] = useState<string | null>(null);
   const [savingOptions, setSavingOptions] = useState(false);
   const [retentionDays, setRetentionDays] = useState<number>(365);
+  const [organization, setOrganization] = useState<{ name: string | null; domain: string | null } | null>(
+    initialOrganization,
+  );
+  const [cleanupRunning, setCleanupRunning] = useState(false);
 
   const buildUrl = useCallback(
     (base: string) => {
@@ -96,9 +106,27 @@ export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = 
     }
   }, [buildUrl]);
 
+  const loadOrganization = useCallback(async () => {
+    try {
+      const payload = await fetchJson<{ ok: boolean; data: { name: string; domain: string } }>(
+        buildUrl("/api/admin/organization"),
+      );
+      setOrganization({ name: payload.data?.name ?? null, domain: payload.data?.domain ?? null });
+    } catch {
+      // fall back to whatever was provided initially
+      setOrganization((prev) => prev ?? initialOrganization);
+    }
+  }, [buildUrl, initialOrganization]);
+
   const reloadAll = useCallback(async () => {
-    await Promise.all([loadClasses(), loadTeachers(), loadIncidentOptions(), loadRetention()]);
-  }, [loadClasses, loadTeachers, loadIncidentOptions, loadRetention]);
+    await Promise.all([
+      loadClasses(),
+      loadTeachers(),
+      loadIncidentOptions(),
+      loadRetention(),
+      loadOrganization(),
+    ]);
+  }, [loadClasses, loadTeachers, loadIncidentOptions, loadRetention, loadOrganization]);
 
   useEffect(() => {
     void reloadAll();
@@ -119,7 +147,39 @@ export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = 
     setTimeout(() => setMessage(null), 3200);
   }
 
-  const effectiveDomain = useMemo(() => impersonatedDomain ?? domain, [impersonatedDomain, domain]);
+  const handleCleanup = useCallback(async () => {
+    if (cleanupRunning) return;
+    if (
+      !window.confirm(
+        "Remove the Bluegum/Koalas sample classes and the S9001-S9010 students from this school?",
+      )
+    ) {
+      return;
+    }
+    setCleanupRunning(true);
+    try {
+      const result = await fetchJson<{
+        ok: boolean;
+        removedClasses: number;
+        removedStudents: number;
+        removedIncidents: number;
+      }>(buildUrl("/api/admin/cleanup-sample-data"), { method: "POST" });
+      report(
+        `Removed ${result.removedClasses} classes, ${result.removedStudents} students, ${result.removedIncidents} incidents.`,
+      );
+      await Promise.all([loadClasses(), loadTeachers(), loadStudents(selectedClassId)]);
+    } catch (err: any) {
+      window.alert(err?.message ?? "Could not remove sample data.");
+    } finally {
+      setCleanupRunning(false);
+    }
+  }, [cleanupRunning, buildUrl, loadClasses, loadTeachers, loadStudents, selectedClassId]);
+
+  const effectiveDomain = useMemo(
+    () => impersonatedDomain ?? organization?.domain ?? domain,
+    [impersonatedDomain, organization, domain],
+  );
+  const organizationLabel = organization?.name ?? effectiveDomain;
 
   return (
     <div style={{ display: "grid", gap: "1.5rem", width: "min(1080px, 100%)" }}>
@@ -139,7 +199,10 @@ export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = 
         <div>
           <h1 style={{ margin: 0, fontSize: "1.75rem", color: "#0f172a" }}>Admin</h1>
           <p style={{ margin: "0.25rem 0 0", color: "#475569" }}>
-            Workspace domain: <strong>{effectiveDomain}</strong>
+            School: <strong>{organizationLabel}</strong>
+            {organization?.domain ? (
+              <span style={{ color: "#94a3b8", fontWeight: 500 }}>({organization.domain})</span>
+            ) : null}
             {isSuperAdminView && impersonatedDomain ? (
               <>
                 {" · managing "}
@@ -248,11 +311,6 @@ export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = 
           report("Roster imported.");
           await Promise.all([loadClasses(), loadStudents(id)]);
         }}
-        onSeedRoster={async (id) => {
-          await fetchJson(buildUrl(`/api/admin/classes/${id}/seed`), { method: "POST" });
-          report("Added sample students.");
-          await Promise.all([loadClasses(), loadStudents(id)]);
-        }}
         onDelete={async (id) => {
           await fetchJson(buildUrl(`/api/admin/classes/${id}`), { method: "DELETE" });
           report("Class archived.");
@@ -346,6 +404,46 @@ export function AdminDashboard({ domain, impersonatedDomain, isSuperAdminView = 
           }}
         />
       </div>
+
+      <section
+        style={{
+          background: "white",
+          borderRadius: "16px",
+          padding: "1rem 1.25rem",
+          boxShadow: "0 20px 40px -32px rgba(15,23,42,0.4)",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "1rem",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div style={{ maxWidth: 520 }}>
+          <h3 style={{ margin: 0, color: "#0f172a" }}>Remove sample data</h3>
+          <p style={{ margin: "0.35rem 0 0", color: "#475569", fontSize: "0.95rem" }}>
+            Deletes the legacy Bluegum/Koalas classes, S9001-S9010 students, and their incidents from this
+            organization. Use this after onboarding to keep rosters clean.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={cleanupRunning}
+          onClick={() => void handleCleanup()}
+          style={{
+            padding: "0.65rem 1.2rem",
+            borderRadius: "12px",
+            border: "1px solid #0f766e",
+            background: cleanupRunning ? "#f1f5f9" : "#0f766e",
+            color: cleanupRunning ? "#0f766e" : "#ffffff",
+            fontWeight: 600,
+            cursor: cleanupRunning ? "not-allowed" : "pointer",
+            minWidth: "220px",
+            textAlign: "center",
+          }}
+        >
+          {cleanupRunning ? "Removing…" : "Remove test classes & students"}
+        </button>
+      </section>
 
       <IncidentControls initialRetention={retentionDays} />
 

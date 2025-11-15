@@ -14,7 +14,6 @@ type Props = {
     file: File,
     mapping: { studentId: string; firstName: string; lastName: string; guardians?: string },
   ) => void;
-  onSeedRoster: (id: string) => void;
   onDelete: (id: string) => void;
 };
 
@@ -81,7 +80,6 @@ export function ClassManager({
   onUpdate,
   onUpdateSpecialists,
   onUploadRoster,
-  onSeedRoster,
   onDelete,
 }: Props) {
   const [name, setName] = useState("");
@@ -334,21 +332,6 @@ export function ClassManager({
                     }}
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => onSeedRoster(cls.id)}
-                  style={{
-                    padding: "0.5rem 0.85rem",
-                    borderRadius: "12px",
-                    border: "1px solid #0f766e",
-                    background: "#ecfdf5",
-                    color: "#047857",
-                    cursor: "pointer",
-                    fontWeight: 600,
-                  }}
-                >
-                  Add sample students
-                </button>
               </div>
             </div>
 
