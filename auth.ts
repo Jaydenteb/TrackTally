@@ -61,7 +61,7 @@ async function ensureTeacher(email: string, displayName: string | null, organiza
   const data: { role?: string; displayName?: string | null; organizationId?: string | null } = {};
 
   if (!teacher) {
-    teacher = await prisma.teacher.create({
+    await prisma.teacher.create({
       data: {
         email,
         role: desiredRole,
@@ -69,7 +69,7 @@ async function ensureTeacher(email: string, displayName: string | null, organiza
         organizationId,
       },
     });
-    return teacher;
+    return getTeacher(email);
   }
   if (teacher.role !== desiredRole && desiredRole) {
     data.role = desiredRole;
@@ -87,6 +87,9 @@ async function ensureTeacher(email: string, displayName: string | null, organiza
   return prisma.teacher.update({
     where: { id: teacher.id },
     data,
+    include: {
+      organization: { select: { id: true, name: true, domain: true } },
+    },
   });
 }
 
@@ -278,7 +281,6 @@ if (authConfigured) {
 }
 
 export { handlers, authFn as auth, signInFn as signIn, signOutFn as signOut };
-
 
 
 
