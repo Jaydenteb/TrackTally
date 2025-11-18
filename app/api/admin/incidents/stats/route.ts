@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../lib/admin-auth";
 import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
 import { getIncidentStats, type IncidentFilters } from "../../../../../lib/incidents-analytics";
+import { logError } from "../../../../../lib/logger";
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
 
     return response;
   } catch (err: any) {
-    console.error("Failed to fetch incident stats:", err);
+    logError(err, "Failed to fetch incident stats", { targetOrgId, filters });
     return NextResponse.json(
       { ok: false, error: err?.message ?? "Failed to fetch statistics." },
       { status: 500 }

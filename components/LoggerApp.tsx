@@ -19,6 +19,7 @@ import { flushQueue, getQueueCount, queueIncident } from "../lib/idb";
 import { startDictation } from "../lib/speech";
 import { InstallPwaButton } from "./InstallPwaButton";
 import { usePwaInstall } from "./PwaInstallProvider";
+import { incidentInputSchema } from "../lib/validation";
 
 type Student = {
   id: string;
@@ -730,6 +731,15 @@ export function LoggerApp({
     let lastError: string | null = null;
 
     for (const incident of incidents) {
+      // Validate incident payload with Zod schema
+      const validation = incidentInputSchema.safeParse(incident);
+      if (!validation.success) {
+        const firstError = validation.error.issues[0];
+        setToast(`Validation error: ${firstError?.message ?? "Invalid data"}`);
+        setIsSubmitting(false);
+        return;
+      }
+
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         await queueIncident(incident);
         queued += 1;

@@ -64,7 +64,8 @@ export async function GET(request: Request) {
 
     return response;
   } catch (err: any) {
-    console.error("Failed to export incidents:", err);
+    const { logError } = await import("../../../../../lib/logger");
+    logError(err, "Failed to export incidents", { targetOrgId, filters });
     return NextResponse.json(
       { ok: false, error: err?.message ?? "Failed to export incidents." },
       { status: 500 }

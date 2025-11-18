@@ -9,6 +9,7 @@ import type { IncidentInput } from "../../../lib/validation";
 import { incidentInputSchema, sanitize, sanitizeOptional } from "../../../lib/validation";
 import { buildRateLimitHeaders, defaultLimits, rateLimit } from "../../../lib/rate-limit";
 import { enforceIncidentRetention } from "../../../lib/settings";
+import { logger, logError } from "../../../lib/logger";
 
 export const runtime = "nodejs";
 export const preferredRegion = "home";
@@ -199,7 +200,11 @@ export async function POST(request: Request) {
         },
       });
     } catch (dbErr) {
-      console.error("DB write failed (continuing to Sheets)", dbErr);
+      logError(dbErr, "DB write failed (continuing to Sheets)", {
+        uuid,
+        organizationId,
+        studentId: data.studentId
+      });
     }
 
     // 2) Append to Google Sheets (source of truth for MVP)
@@ -255,11 +260,20 @@ export async function POST(request: Request) {
           });
         }
       } catch (notifyError) {
-        console.error("Failed to send notification", notifyError);
+        logError(notifyError, "Failed to send notification", {
+          uuid,
+          homeroomEmail,
+          studentId: data.studentId
+        });
       }
     }
   } catch (error) {
-    console.error("Failed to append incident", error);
+    logError(error, "Failed to append incident", {
+      uuid,
+      organizationId,
+      studentId: data.studentId,
+      type: data.type
+    });
     let message = "Failed to log incident.";
     const err = error as {
       errors?: Array<{ message?: string }>;

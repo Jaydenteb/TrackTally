@@ -14,8 +14,10 @@ type RateLimitResult = {
 const buckets = new Map<string, Bucket>();
 
 export const defaultLimits = {
-  incident: { limit: 60, windowMs: 60_000 },
-  admin: { limit: 120, windowMs: 60_000 },
+  // 30 incidents per hour (reasonable for a typical teacher)
+  incident: { limit: 30, windowMs: 60 * 60 * 1000 },
+  // 100 admin requests per hour (viewing dashboards, managing data)
+  admin: { limit: 100, windowMs: 60 * 60 * 1000 },
 };
 
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
