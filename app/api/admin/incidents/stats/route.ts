@@ -1,9 +1,8 @@
 import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../lib/admin-auth";
-import { recordAuditLog } from "../../../../../lib/settings";
 import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
-import { generateIncidentCSV, type IncidentFilters } from "../../../../../lib/incidents-analytics";
+import { getIncidentStats, type IncidentFilters } from "../../../../../lib/incidents-analytics";
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -26,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
   }
 
-  // Parse query parameters for filtering
+  // Parse query parameters (same filters as main endpoint)
   const url = new URL(request.url);
   const filters: IncidentFilters = {
     organizationId: targetOrgId,
@@ -41,32 +40,22 @@ export async function GET(request: Request) {
   };
 
   try {
-    const csv = await generateIncidentCSV(filters);
+    const stats = await getIncidentStats(filters);
 
-    const now = new Date();
-    const filename = `tracktally-incidents-${now.toISOString().replace(/[:.]/g, "-")}.csv`;
-
-    const response = new NextResponse(csv, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
+    const response = NextResponse.json({
+      ok: true,
+      data: stats,
     });
 
     if (rateHeaders) {
       Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));
     }
 
-    const performer = session?.user?.email?.toLowerCase() ?? "unknown";
-    const incidentCount = csv.split("\n").length - 1; // Subtract header row
-    await recordAuditLog("incidents.export", performer, { count: incidentCount, filters: JSON.stringify(filters) });
-
     return response;
   } catch (err: any) {
-    console.error("Failed to export incidents:", err);
+    console.error("Failed to fetch incident stats:", err);
     return NextResponse.json(
-      { ok: false, error: err?.message ?? "Failed to export incidents." },
+      { ok: false, error: err?.message ?? "Failed to fetch statistics." },
       { status: 500 }
     );
   }
