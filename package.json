@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma migrate deploy && prisma generate && next build",
+    "build": "npm run migrate:deploy && prisma generate && next build",
+    "migrate:deploy": "if [ -n \"$DIRECT_DATABASE_URL\" ]; then prisma migrate deploy; else echo 'Skipping migrations (DIRECT_DATABASE_URL not set)'; fi",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
