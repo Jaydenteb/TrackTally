@@ -227,6 +227,20 @@ export function AdminDashboard({
             Open incident logger
           </a>
           <a
+            href="/admin/incidents"
+            style={{
+              border: "1px solid #cbd5f5",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
+              textDecoration: "none",
+              color: "#0f172a",
+              background: "#f8fafc",
+              fontWeight: 600,
+            }}
+          >
+            View incidents
+          </a>
+          <a
             href="/api/health"
             style={{
               border: "1px solid #cbd5f5",
