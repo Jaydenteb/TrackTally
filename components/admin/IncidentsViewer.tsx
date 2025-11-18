@@ -255,7 +255,7 @@ export function IncidentsViewer({
     setFilters((prev) => ({
       ...prev,
       [key]: value,
-      page: key === "page" ? value : 1,
+      page: key === "page" ? (typeof value === "number" ? value : Number(value)) : 1,
     }));
   };
 
