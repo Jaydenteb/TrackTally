@@ -213,6 +213,34 @@ export function AdminDashboard({
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: 'center', flexWrap: 'wrap' }}>
           <a
+            href="/admin/analytics"
+            style={{
+              border: "1px solid #0f766e",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
+              textDecoration: "none",
+              color: "#0f766e",
+              background: "#ecfeff",
+              fontWeight: 600,
+            }}
+          >
+            Analytics
+          </a>
+          <a
+            href="/admin/incidents"
+            style={{
+              border: "1px solid #cbd5f5",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
+              textDecoration: "none",
+              color: "#0f172a",
+              background: "#f8fafc",
+              fontWeight: 600,
+            }}
+          >
+            View incidents
+          </a>
+          <a
             href="/teacher"
             style={{
               border: "1px solid #cbd5f5",
@@ -224,7 +252,7 @@ export function AdminDashboard({
               fontWeight: 600,
             }}
           >
-            Open incident logger
+            Incident logger
           </a>
           <a
             href="/api/health"
