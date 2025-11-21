@@ -7,3 +7,4 @@ prisma/tracktally.db
 prisma/tracktally.db-journal
 
 .vercel
+tsconfig.tsbuildinfo

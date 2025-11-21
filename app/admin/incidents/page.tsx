@@ -1,78 +1,58 @@
 import { auth } from "../../../auth";
 import { redirect } from "next/navigation";
-import { getIncidentRetentionDays } from "../../../lib/settings";
-import { IncidentControls } from "../../../components/admin/IncidentControls";
-import { IncidentsList } from "../../../components/admin/IncidentsList";
+import { IncidentsViewer } from "../../../components/admin/IncidentsViewer";
 
-export const runtime = "nodejs";
+type Props = {
+  searchParams?: {
+    impersonate?: string;
+  };
+};
 
-export default async function AdminIncidentsPage() {
+function sanitizeDomain(value?: string | null) {
+  if (!value) return null;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    return url.hostname.toLowerCase();
+  } catch {
+    return trimmed.replace(/^https?:\/\//, "").split("/")[0];
+  }
+}
+
+export default async function IncidentsPage({ searchParams }: Props) {
   const session = await auth();
-  if (!session || session.user?.role !== "admin") {
-    redirect("/login?callbackUrl=/admin/incidents");
+  const allowedDomain = process.env.ALLOWED_GOOGLE_DOMAIN ?? "your approved domain";
+
+  if (!session) {
+    redirect("/login");
   }
 
-  const retentionDays = await getIncidentRetentionDays();
+  if (session.user?.role !== "admin" && session.user?.role !== "superadmin") {
+    redirect("/");
+  }
+
+  const impersonatedDomain =
+    session.user?.role === "superadmin" ? sanitizeDomain(searchParams?.impersonate) : null;
+  const organizationName = session.user?.organizationName ?? null;
+  const organizationDomain = session.user?.organizationDomain ?? allowedDomain;
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        padding: "1.5rem",
+        background: "#f1f5f9",
+        padding: "2.5rem 1.5rem 3rem",
         display: "flex",
         justifyContent: "center",
-        background: "#f8fafc",
       }}
     >
-      <div style={{ width: "min(1400px, 100%)", display: "grid", gap: "1rem" }}>
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "white",
-            padding: "1rem 1.25rem",
-            borderRadius: "16px",
-            boxShadow: "0 25px 55px -40px rgba(15,23,42,0.35)",
-          }}
-        >
-          <h1 style={{ margin: 0, fontSize: "1.5rem", color: "#0f172a" }}>Incidents</h1>
-          <nav style={{ display: "flex", gap: "0.5rem" }}>
-            <a
-              href="/admin/analytics"
-              style={{
-                display: "inline-flex",
-                padding: "0.55rem 0.85rem",
-                borderRadius: "10px",
-                border: "1px solid #0f766e",
-                color: "#0f766e",
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
-            >
-              Analytics
-            </a>
-            <a
-              href="/admin"
-              style={{
-                display: "inline-flex",
-                padding: "0.55rem 0.85rem",
-                borderRadius: "10px",
-                border: "1px solid #0f766e",
-                color: "#0f766e",
-                textDecoration: "none",
-                fontWeight: 600,
-              }}
-            >
-              Admin Home
-            </a>
-          </nav>
-        </header>
-
-        <IncidentControls initialRetention={retentionDays} />
-
-        <IncidentsList />
-      </div>
+      <IncidentsViewer
+        domain={organizationDomain}
+        impersonatedDomain={impersonatedDomain}
+        isSuperAdminView={session.user?.role === "superadmin"}
+        organizationName={impersonatedDomain ? null : organizationName}
+      />
     </main>
   );
 }

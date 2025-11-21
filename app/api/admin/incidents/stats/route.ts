@@ -1,8 +1,8 @@
 import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
-import { requireAdmin } from "../../../../lib/admin-auth";
-import { resolveOrganizationIdForRequest } from "../../../../lib/organizations";
-import { getIncidentsWithFilters, type IncidentFilters } from "../../../../lib/incidents-analytics";
+import { requireAdmin } from "../../../../../lib/admin-auth";
+import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
+import { getIncidentStats, type IncidentFilters } from "../../../../../lib/incidents-analytics";
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
   }
 
-  // Parse query parameters
+  // Parse query parameters (same filters as main endpoint)
   const url = new URL(request.url);
   const filters: IncidentFilters = {
     organizationId: targetOrgId,
@@ -37,19 +37,14 @@ export async function GET(request: Request) {
     level: url.searchParams.get("level") ?? undefined,
     category: url.searchParams.get("category") ?? undefined,
     type: (url.searchParams.get("type") as "incident" | "commendation" | undefined) ?? undefined,
-    page: url.searchParams.get("page") ? parseInt(url.searchParams.get("page")!) : undefined,
-    limit: url.searchParams.get("limit") ? parseInt(url.searchParams.get("limit")!) : undefined,
-    sortBy: (url.searchParams.get("sortBy") as "timestamp" | "studentName" | "level" | "category") ?? undefined,
-    sortOrder: (url.searchParams.get("sortOrder") as "asc" | "desc") ?? undefined,
   };
 
   try {
-    const result = await getIncidentsWithFilters(filters);
+    const stats = await getIncidentStats(filters);
 
     const response = NextResponse.json({
       ok: true,
-      data: result.incidents,
-      pagination: result.pagination,
+      data: stats,
     });
 
     if (rateHeaders) {
@@ -58,9 +53,9 @@ export async function GET(request: Request) {
 
     return response;
   } catch (err: any) {
-    console.error("Failed to fetch incidents:", err);
+    console.error("Failed to fetch incident stats:", err);
     return NextResponse.json(
-      { ok: false, error: err?.message ?? "Failed to fetch incidents." },
+      { ok: false, error: err?.message ?? "Failed to fetch statistics." },
       { status: 500 }
     );
   }

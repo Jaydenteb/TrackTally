@@ -1,9 +1,9 @@
 import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "../../../../../lib/admin-auth";
-import { prisma } from "../../../../../lib/prisma";
 import { recordAuditLog } from "../../../../../lib/settings";
 import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
+import { generateIncidentCSV, type IncidentFilters } from "../../../../../lib/incidents-analytics";
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -13,15 +13,6 @@ async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId
     baseOrganizationId: baseOrgId,
     requestedDomain: requestedDomain ?? undefined,
   });
-}
-
-function toCsvValue(value: string | null | undefined) {
-  if (value === null || value === undefined) return "";
-  const str = String(value);
-  if (str.includes("\"") || str.includes(",") || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
 }
 
 export async function GET(request: Request) {
@@ -35,65 +26,48 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: err?.message ?? "Invalid organization." }, { status: 400 });
   }
 
-  const incidents = await prisma.incident.findMany({
-    where: { organizationId: targetOrgId },
-    orderBy: { timestamp: "desc" },
-    include: {
-      classroom: { select: { name: true, code: true } },
-    },
-  });
+  // Parse query parameters for filtering
+  const url = new URL(request.url);
+  const filters: IncidentFilters = {
+    organizationId: targetOrgId,
+    dateFrom: url.searchParams.get("dateFrom") ?? undefined,
+    dateTo: url.searchParams.get("dateTo") ?? undefined,
+    studentId: url.searchParams.get("studentId") ?? undefined,
+    teacherEmail: url.searchParams.get("teacherEmail") ?? undefined,
+    classroomId: url.searchParams.get("classroomId") ?? undefined,
+    level: url.searchParams.get("level") ?? undefined,
+    category: url.searchParams.get("category") ?? undefined,
+    type: (url.searchParams.get("type") as "incident" | "commendation" | undefined) ?? undefined,
+  };
 
-  const header = [
-    "timestamp",
-    "studentId",
-    "studentName",
-    "level",
-    "category",
-    "location",
-    "actionTaken",
-    "note",
-    "teacherEmail",
-    "classCode",
-    "device",
-    "uuid",
-  ];
+  try {
+    const csv = await generateIncidentCSV(filters);
 
-  const rows = incidents.map((incident) => [
-    incident.timestamp.toISOString(),
-    incident.studentId ?? "",
-    incident.studentName,
-    incident.level,
-    incident.category,
-    incident.location,
-    incident.actionTaken ?? "",
-    incident.note ?? "",
-    incident.teacherEmail,
-    incident.classroom?.code ?? incident.classCode ?? "",
-    incident.device ?? "",
-    incident.uuid,
-  ]);
+    const now = new Date();
+    const filename = `tracktally-incidents-${now.toISOString().replace(/[:.]/g, "-")}.csv`;
 
-  const csv = [header, ...rows]
-    .map((line) => line.map((cell) => toCsvValue(cell)).join(","))
-    .join("\n");
+    const response = new NextResponse(csv, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
 
-  const now = new Date();
-  const filename = `tracktally-incidents-${now.toISOString().replace(/[:.]/g, "-")}.csv`;
+    if (rateHeaders) {
+      Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));
+    }
 
-  const response = new NextResponse(csv, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  });
+    const performer = session?.user?.email?.toLowerCase() ?? "unknown";
+    const incidentCount = csv.split("\n").length - 1; // Subtract header row
+    await recordAuditLog("incidents.export", performer, { count: incidentCount, filters: JSON.stringify(filters) });
 
-  if (rateHeaders) {
-    Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));
+    return response;
+  } catch (err: any) {
+    console.error("Failed to export incidents:", err);
+    return NextResponse.json(
+      { ok: false, error: err?.message ?? "Failed to export incidents." },
+      { status: 500 }
+    );
   }
-
-  const performer = session?.user?.email?.toLowerCase() ?? "unknown";
-  await recordAuditLog("incidents.export", performer, { count: incidents.length });
-
-  return response;
 }
