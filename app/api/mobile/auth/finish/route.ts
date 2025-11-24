@@ -9,7 +9,7 @@ function buildHtml(targetUrl: string) {
   <html lang="en">
     <head>
       <meta charset="utf-8" />
-      <title>Returning to TrackTally</title>
+      <title>Returning to TrackTally™</title>
       <meta http-equiv="refresh" content="0;url='${escaped}'" />
       <style>
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 2rem; text-align: center; }
@@ -17,7 +17,7 @@ function buildHtml(targetUrl: string) {
       <script>window.location.href = "${escaped}";</script>
     </head>
     <body>
-      <p>Redirecting to the TrackTally app&hellip;</p>
+      <p>Redirecting to the TrackTally™ app&hellip;</p>
       <p>If nothing happens, <a href="${escaped}">tap here</a>.</p>
     </body>
   </html>`;

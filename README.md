@@ -1,8 +1,8 @@
-# TrackTally – Behaviour Incident Logger
+﻿# TrackTally™ – Behaviour Incident Logger
 
-TrackTally is a Next.js 15 PWA that records classroom behaviour incidents directly into Google Sheets. It is optimised for mobile, works offline, and now includes a Google Workspace–protected admin console for managing classes, teachers, and student rosters.
+TrackTally™ is a Next.js 15 PWA that records classroom behaviour incidents directly into Google Sheets. It is optimised for mobile, works offline, and now includes a Google Workspace–protected admin console for managing classes, teachers, and student rosters.
 
-**Current Status**: ✅ **Ready for Demo & Testing** (1-2 schools, January 2025)
+**Current Status**: Ready for Demo & Testing (1–2 schools, January 2025)
 
 ## Features
 
@@ -18,7 +18,7 @@ TrackTally is a Next.js 15 PWA that records classroom behaviour incidents direct
 
 ## Recent Updates (January 2025)
 
-### ✅ Pre-Production Security & Stability Fixes Completed
+### âœ… Pre-Production Security & Stability Fixes Completed
 - **Domain Authorization**: Fixed security issue where missing `ALLOWED_GOOGLE_DOMAIN` allowed any Google account (now fails closed)
 - **Mobile Auth Cleanup**: Automated cron job to prune expired mobile auth tickets (runs daily at 2 AM)
 - **Test Suite**: Added Vitest with critical path tests for multi-tenant isolation, auth flows, and incident validation
@@ -28,16 +28,16 @@ TrackTally is a Next.js 15 PWA that records classroom behaviour incidents direct
 
 **See**: `IMPLEMENTATION-SUMMARY.md` for complete implementation details and testing checklist.
 
-## Priority: Super Admin & Multi‑Tenant Auth
+## Priority: Super Admin & Multiâ€‘Tenant Auth
 
-We are preparing TrackTally for multiple schools and future individual licences. The immediate focus is enabling a Super Admin experience and multi‑tenant authentication while keeping mobile sign‑in excellent.
+We are preparing TrackTally for multiple schools and future individual licences. The immediate focus is enabling a Super Admin experience and multiâ€‘tenant authentication while keeping mobile signâ€‘in excellent.
 
 - Deliverables
   - Super Admin console (`/super-admin`) to manage organizations (schools), domains, seats/licences, and admins.
-  - Data model: `Organization`, `OrgDomain` (DNS‑verified), `OrgMember` (role: `super_admin`, `org_admin`, `teacher`), and `License` (plan, seats, status, dates).
-  - Domain verification flow: generate a DNS TXT token, poll/verify, then allow sign‑ins from that domain.
-  - Auth changes: NextAuth sign‑in checks allowed domains from `OrgDomain` instead of a single `ALLOWED_GOOGLE_DOMAIN` (kept as single‑tenant fallback).
-  - Mobile‑first Google sign‑in page (already in place) with clear domain messaging and fast path back to the logger.
+  - Data model: `Organization`, `OrgDomain` (DNSâ€‘verified), `OrgMember` (role: `super_admin`, `org_admin`, `teacher`), and `License` (plan, seats, status, dates).
+  - Domain verification flow: generate a DNS TXT token, poll/verify, then allow signâ€‘ins from that domain.
+  - Auth changes: NextAuth signâ€‘in checks allowed domains from `OrgDomain` instead of a single `ALLOWED_GOOGLE_DOMAIN` (kept as singleâ€‘tenant fallback).
+  - Mobileâ€‘first Google signâ€‘in page (already in place) with clear domain messaging and fast path back to the logger.
 
 - Configuration (target state)
   - `NEXTAUTH_URL` set per env (dev/staging/prod) to your public hostname.
@@ -46,7 +46,7 @@ We are preparing TrackTally for multiple schools and future individual licences.
 
 - Implementation phases
   1) Schema: add `Organization`, `OrgDomain`, `OrgMember`, `License`; migrate DB; seed your first org.
-  2) Auth guard: load allowed domains at sign‑in; block non‑verified domains; keep `ALLOWED_GOOGLE_DOMAIN` honored when set.
+  2) Auth guard: load allowed domains at signâ€‘in; block nonâ€‘verified domains; keep `ALLOWED_GOOGLE_DOMAIN` honored when set.
   3) Console: `/super-admin` UI for org CRUD, domain verification (TXT token), member roles, and seat counts.
   4) Licensing: enforce seat limits (soft first), add basic audit events; Stripe/Billing later.
 
@@ -68,40 +68,40 @@ Set `NEXTAUTH_URL` to the exact base URL of each environment.
 
 You have two pragmatic paths:
 
-1) Short‑term (simple): run TrackTally at a subdomain of your existing brand, e.g. `tracktally.spelltally.com`. Give TrackTally its own OAuth client (within the same Google Cloud project) and its own `NEXTAUTH_URL`. This keeps cost/ops low and can migrate later.
-2) Long‑term (scales best): use a parent brand domain (e.g. `tally.education`) with product subdomains: `tracktally.tally.education`, `spelltally.tally.education`, and optionally `id.tally.education` for future cross‑app SSO. Each app keeps distinct OAuth clients and envs; the identity subdomain can unify sign‑in later.
+1) Shortâ€‘term (simple): run TrackTally at a subdomain of your existing brand, e.g. `tracktally.spelltally.com`. Give TrackTally its own OAuth client (within the same Google Cloud project) and its own `NEXTAUTH_URL`. This keeps cost/ops low and can migrate later.
+2) Longâ€‘term (scales best): use a parent brand domain (e.g. `tally.education`) with product subdomains: `tracktally.tally.education`, `spelltally.tally.education`, and optionally `id.tally.education` for future crossâ€‘app SSO. Each app keeps distinct OAuth clients and envs; the identity subdomain can unify signâ€‘in later.
 
-Recommendation: adopt option 1 now for speed; plan option 2 as you add more apps or need cross‑product SSO.
+Recommendation: adopt option 1 now for speed; plan option 2 as you add more apps or need crossâ€‘product SSO.
 
 ## Project structure
 
 ```
 behaviour-logger
-├─ app
-│  ├─ admin/page.tsx                  # Admin dashboard wrapper (server component)
-│  ├─ api
-│  │  ├─ auth/[...nextauth]/route.ts  # NextAuth handlers (Node runtime)
-│  │  ├─ health/route.ts              # Health endpoint
-│  │  ├─ log-incident/route.ts        # Google Sheets append API
-│  │  ├─ roster/route.ts              # Teacher roster feed (Prisma)
-│  │  └─ admin/...                    # CRUD APIs (classes, teachers, students, seed, import)
-│  ├─ login/page.tsx                  # Google sign-in screen
-│  ├─ teacher/page.tsx                # Admin shortcut into the logger
-│  ├─ layout.tsx                      # Root layout with SessionProvider + SW register
-│  └─ page.tsx                        # Teacher logger (client)
-├─ components
-│  ├─ LoggerApp.tsx                   # Incident logger UI
-│  └─ admin/                          # Admin dashboard client modules
-├─ lib/                               # Prisma client, admin guard, Sheets helper, IndexedDB, Speech
-├─ prisma/
-│  ├─ schema.prisma                   # SQLite schema (Teacher/Classroom/TeacherClass/Student)
-│  └─ tracktally.db                   # Local DB (gitignored)
-├─ public/manifest.json               # PWA manifest
-├─ auth.ts                            # NextAuth configuration (ensures teachers exist in Prisma)
-├─ middleware.ts                      # Route guard (admin/teacher)
-├─ .env.example                       # Env template
-├─ .gitignore                         # Includes SQLite DB + Next/Node modules
-└─ README.md
+â”œâ”€ app
+â”‚  â”œâ”€ admin/page.tsx                  # Admin dashboard wrapper (server component)
+â”‚  â”œâ”€ api
+â”‚  â”‚  â”œâ”€ auth/[...nextauth]/route.ts  # NextAuth handlers (Node runtime)
+â”‚  â”‚  â”œâ”€ health/route.ts              # Health endpoint
+â”‚  â”‚  â”œâ”€ log-incident/route.ts        # Google Sheets append API
+â”‚  â”‚  â”œâ”€ roster/route.ts              # Teacher roster feed (Prisma)
+â”‚  â”‚  â””â”€ admin/...                    # CRUD APIs (classes, teachers, students, seed, import)
+â”‚  â”œâ”€ login/page.tsx                  # Google sign-in screen
+â”‚  â”œâ”€ teacher/page.tsx                # Admin shortcut into the logger
+â”‚  â”œâ”€ layout.tsx                      # Root layout with SessionProvider + SW register
+â”‚  â””â”€ page.tsx                        # Teacher logger (client)
+â”œâ”€ components
+â”‚  â”œâ”€ LoggerApp.tsx                   # Incident logger UI
+â”‚  â””â”€ admin/                          # Admin dashboard client modules
+â”œâ”€ lib/                               # Prisma client, admin guard, Sheets helper, IndexedDB, Speech
+â”œâ”€ prisma/
+â”‚  â”œâ”€ schema.prisma                   # SQLite schema (Teacher/Classroom/TeacherClass/Student)
+â”‚  â””â”€ tracktally.db                   # Local DB (gitignored)
+â”œâ”€ public/manifest.json               # PWA manifest
+â”œâ”€ auth.ts                            # NextAuth configuration (ensures teachers exist in Prisma)
+â”œâ”€ middleware.ts                      # Route guard (admin/teacher)
+â”œâ”€ .env.example                       # Env template
+â”œâ”€ .gitignore                         # Includes SQLite DB + Next/Node modules
+â””â”€ README.md
 ```
 
 ## Environment setup
@@ -170,7 +170,7 @@ After first deployment, you MUST create an organization and assign users:
 - Add them to `SUPER_ADMIN_EMAILS` for testing (they can then create orgs)
 ## Google Sheets
 
-1. Create **Behaviour Logs** sheet, tab **Incidents**, header row (A1–L1):
+1. Create **Behaviour Logs** sheet, tab **Incidents**, header row (A1â€“L1):
    `timestamp,studentId,studentName,level,category,location,actionTaken,note,teacherEmail,classCode,device,uuid`
 2. Enable Google Sheets API, create a Service Account, share sheet with that account.
 3. Paste credentials into `.env.local` (keep newline escape sequences).
@@ -180,7 +180,7 @@ After first deployment, you MUST create an organization and assign users:
 - **Classes**: create/archive, assign homeroom teachers, add specialists, import CSV rosters.
 - **Teachers & Staff**: provision email, set role (teacher/admin), toggle specialist, assign classes, activate/deactivate.
 - **Students**: edit names/IDs/notes/guardians, reassign classes, mark active/inactive.
-- **Data hygiene**: one-click “Remove sample data” button deletes the legacy Bluegum/Koalas classes and S9001–S9010 students for the current school.
+- **Data hygiene**: one-click â€œRemove sample dataâ€ button deletes the legacy Bluegum/Koalas classes and S9001â€“S9010 students for the current school.
 - CSV import now prompts you to map columns (studentId, firstName, lastName, optional guardians) before uploading.
 - **Incidents**: new viewer shows the latest entries (from the DB) with basic details; Sheets remains the flat-file source for exports.
 
@@ -189,7 +189,7 @@ After first deployment, you MUST create an organization and assign users:
 - Fetches rosters via `/api/roster` (admins see all classes; teachers see assigned ones). Quick-find jumps across classes without reloading.
 - Offline queue stores failed submissions; mic button uses Web Speech API (en-AU).
 - Admin link appears in header for quick return to `/admin`.
-- Shows the active school name/domain beside the logger so teachers know which organization they’re operating in.
+- Shows the active school name/domain beside the logger so teachers know which organization theyâ€™re operating in.
 
 ## Testing checklist
 
@@ -206,14 +206,14 @@ After first deployment, you MUST create an organization and assign users:
 4. Sign out and back in to get organization assigned
 
 ### Functional Testing
-1. Log an incident → expect "Logged" toast + row in Google Sheets
-2. Test offline submission → entry queued, auto-flush on reconnect
+1. Log an incident â†’ expect "Logged" toast + row in Google Sheets
+2. Test offline submission â†’ entry queued, auto-flush on reconnect
 3. Try mic dictation (iOS Safari / Chrome)
 4. Switch classes via quick-find and verify roster persists
 5. Admin tasks: create class, import CSV, assign teachers, edit/move students
 6. Verify audit logs created: `SELECT * FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 10;`
 7. Test error boundary: Intentionally trigger error, verify friendly message shown
-8. `GET /api/health` → `{ "ok": true }`
+8. `GET /api/health` â†’ `{ "ok": true }`
 
 ### PWA Testing (Mobile Demo)
 1. **iOS Safari**: Add to Home Screen, verify app icon appears
@@ -246,6 +246,309 @@ After first deployment, you MUST create an organization and assign users:
 - `/api/log-incident` upserts each incident into the DB first (idempotent on `uuid`), then appends to Sheets. If DB write fails, it continues to Sheets.
 - **Organization requirement**: All teachers/admins must have an `organizationId` assigned to log incidents or access admin routes (403 Forbidden if missing).
 
+## LMS Integration Roadmap (SIMON and Future Providers)
+
+TrackTally includes a flexible LMS template system that allows incident data to be mapped and exported in formats compatible with external Learning Management Systems like SIMON.
+
+### Current Implementation (Phase 1: Presentation-Only) ✅
+
+**Status**: Completed - Ready for demos
+
+The current implementation provides **transformation-only** integration:
+- TrackTally continues storing data in its own schema (no database changes)
+- LMS-specific fields are generated via template functions at export time
+- Fields not collected by TrackTally use sensible defaults (e.g., `status: "resolved"`)
+- Super Admin can configure LMS provider per organization via `/super-admin`
+- School admins see an "LMS Export" page when SIMON is configured
+
+**What works today:**
+- Switch LMS provider in Super Admin dashboard
+- View field mapping preview (shows which fields are mapped vs. defaults)
+- Export incidents in SIMON JSON format via `/admin/lms-export`
+- Download/copy JSON for integration testing
+- Demo how TrackTally data aligns with SIMON's workflow
+
+**Files involved:**
+- `lib/lms-templates.ts` - Template definitions and transformation logic
+- `components/SuperAdmin/LmsMappingPreview.tsx` - Field mapping preview
+- `app/admin/lms-export/page.tsx` - Export demo page
+- `prisma/schema.prisma` - Organization.lmsProvider enum field
+
+**Perfect for:** Demos, proof-of-concept integrations, and understanding alignment before committing to schema changes.
+
+---
+
+### Full Integration (Phase 2: Complete Field Collection)
+
+To move from demo to production with **full two-way SIMON integration**, follow this roadmap:
+
+#### Step 1: Extend Database Schema (~2-3 hours)
+
+Add SIMON-specific fields to the Incident model:
+
+```prisma
+// prisma/schema.prisma
+model Incident {
+  // ... existing fields (timestamp, type, studentId, category, etc.) ...
+
+  // SIMON: Enhanced metadata
+  title              String?         // Separate from category
+  details            String?         // Separate from note
+  time               String?         // Incident time (not just date)
+
+  // SIMON: Status tracking
+  status             String?         @default("resolved")  // "resolved" | "unresolved"
+  followUpRequired   Boolean         @default(false)
+  followUpNotes      String?
+  perceivedMotivation String?
+
+  // SIMON: Structured location
+  locationType       String?         // "yard" | "room" | "offsite"
+  campus             String?
+  yardArea           String?
+  roomId             String?
+
+  // SIMON: Multi-student/staff tracking
+  instigatorIds      String[]        @default([])
+  affectedStudentIds String[]        @default([])
+  affectedStaffIds   String[]        @default([])
+
+  // SIMON: Notification workflow
+  notifyRoleCodes    String[]        @default([])
+  notifyStaffIds     String[]        @default([])
+  detentionAdded     Boolean         @default(false)
+
+  // Index SIMON-specific fields
+  @@index([status])
+  @@index([followUpRequired])
+}
+```
+
+**Migration command:**
+```bash
+npx prisma migrate dev --name add_simon_fields
+```
+
+**Important:** All fields are nullable/optional with defaults, so existing incidents remain valid.
+
+---
+
+#### Step 2: Conditional Logger UI (~8-12 hours)
+
+Modify the incident logger to show SIMON-specific fields based on `organization.lmsProvider`:
+
+```typescript
+// components/LoggerApp.tsx (pseudocode)
+
+function LoggerApp() {
+  const [organization, setOrganization] = useState(null);
+
+  useEffect(() => {
+    // Fetch organization.lmsProvider from /api/admin/organization
+    fetch('/api/admin/organization')
+      .then(res => res.json())
+      .then(data => setOrganization(data.data));
+  }, []);
+
+  const isSimonMode = organization?.lmsProvider === 'SIMON';
+
+  return (
+    <form>
+      {/* Always show core fields */}
+      <StudentPicker />
+      <LevelSelector />
+      <CategorySelector />
+      <LocationInput />
+      <ActionTakenInput />
+      <NotesTextarea />
+
+      {/* SIMON-specific tabs/fields */}
+      {isSimonMode && (
+        <>
+          <SimonWhoTab />          {/* Instigators, affected students/staff */}
+          <SimonInformationTab />  {/* Perceived motivation, follow-up, notifications */}
+          <SimonDetentionToggle />
+        </>
+      )}
+
+      <SubmitButton />
+    </form>
+  );
+}
+```
+
+**Key components to create:**
+- `SimonWhoTab.tsx` - Multi-student selector for instigators/affected
+- `SimonInformationTab.tsx` - Follow-up checkbox, motivation textarea, notification role/staff pickers
+- `SimonLocationPicker.tsx` - Structured location (yard/room/offsite with sub-fields)
+
+**Conditional validation:**
+```typescript
+// lib/validation.ts
+export function getIncidentSchema(lmsProvider: string) {
+  const baseSchema = z.object({
+    studentId: z.string(),
+    category: z.string(),
+    level: z.enum(['Minor', 'Major']),
+    // ... core fields
+  });
+
+  if (lmsProvider === 'SIMON') {
+    return baseSchema.extend({
+      title: z.string().optional(),
+      status: z.enum(['resolved', 'unresolved']).default('resolved'),
+      followUpRequired: z.boolean().default(false),
+      followUpNotes: z.string().optional(),
+      locationType: z.enum(['yard', 'room', 'offsite']).optional(),
+      instigatorIds: z.array(z.string()).default([]),
+      // ... other SIMON fields
+    });
+  }
+
+  return baseSchema;
+}
+```
+
+---
+
+#### Step 3: Update API Endpoints (~4-6 hours)
+
+Modify incident creation/update to handle SIMON fields:
+
+```typescript
+// app/api/log-incident/route.ts
+export async function POST(request: Request) {
+  const session = await auth();
+  // ... auth checks ...
+
+  const body = await request.json();
+
+  // Get organization to determine validation schema
+  const org = await prisma.organization.findUnique({
+    where: { id: session.user.organizationId },
+    select: { lmsProvider: true }
+  });
+
+  // Validate with provider-specific schema
+  const schema = getIncidentSchema(org?.lmsProvider || 'TRACKTALLY');
+  const validated = schema.parse(body);
+
+  // Create incident with all fields
+  const incident = await prisma.incident.create({
+    data: {
+      // Core fields
+      timestamp: new Date(),
+      studentId: validated.studentId,
+      category: validated.category,
+      // ... existing fields ...
+
+      // SIMON fields (only if present)
+      ...(validated.title && { title: validated.title }),
+      ...(validated.status && { status: validated.status }),
+      ...(validated.followUpRequired !== undefined && {
+        followUpRequired: validated.followUpRequired
+      }),
+      ...(validated.instigatorIds && { instigatorIds: validated.instigatorIds }),
+      // ... other conditional fields
+    }
+  });
+
+  return Response.json({ ok: true, data: incident });
+}
+```
+
+**Also update:**
+- `app/api/admin/students/[id]/incidents/route.ts` - Include SIMON fields in student profile API
+- `app/api/admin/incidents/route.ts` - Add SIMON fields to incident list
+- `app/api/admin/incidents/export/route.ts` - Export with full SIMON data (no defaults needed)
+
+---
+
+#### Step 4: Update Template System (~2 hours)
+
+Once SIMON fields are in the database, update the template to use **real data instead of defaults**:
+
+```typescript
+// lib/lms-templates.ts
+export const LMS_TEMPLATES = {
+  SIMON: {
+    // ... existing mappings ...
+
+    // Change from defaults to actual data
+    status: (i) => i.status || "resolved",              // Use DB value, fallback to default
+    followUpRequired: (i) => i.followUpRequired ?? false,
+    followUpNotes: (i) => i.followUpNotes,
+    instigatorIds: (i) => i.instigatorIds || [],
+    detentionAdded: (i) => i.detentionAdded ?? false,
+    // ... etc
+  }
+};
+
+// Update getDefaultFields to reflect what's actually collected
+export function getDefaultFields(provider: "TRACKTALLY" | "SIMON"): string[] {
+  if (provider === "TRACKTALLY") return [];
+
+  // After Phase 2, most SIMON fields are no longer defaults
+  return [
+    // Only fields still using defaults (not yet collected)
+  ];
+}
+```
+
+---
+
+### Phase 3: Advanced Integrations (Future)
+
+Once SIMON integration is stable, consider:
+
+**Bi-directional sync:**
+- Webhook receiver to import incidents from SIMON into TrackTally
+- API for SIMON to query incident history
+- Conflict resolution strategy
+
+**Additional LMS providers:**
+- Add new enum value: `enum LmsProvider { TRACKTALLY, SIMON, POWERSCHOOL }`
+- Create new template in `LMS_TEMPLATES.POWERSCHOOL`
+- Repeat conditional UI approach for provider-specific fields
+
+**Template customization:**
+- Allow Super Admins to override field mappings per organization
+- Store custom mappings in `Setting` table keyed by `org-lms-mapping:{orgId}`
+
+---
+
+### Migration Timeline Estimate
+
+| Phase | Effort | Timeline | Blocking? |
+|-------|--------|----------|-----------|
+| **Current (Demo)** | Done | ✅ | No - ready today |
+| **Schema Extension** | 2-3 hours | 1 day | Yes - must migrate before Phase 2 |
+| **Conditional Logger UI** | 8-12 hours | 2-3 days | Yes - core integration work |
+| **API Updates** | 4-6 hours | 1 day | Yes - data must be saved |
+| **Template Updates** | 2 hours | Half day | No - works with defaults |
+| **Testing & QA** | 8 hours | 1-2 days | Yes - verify data integrity |
+| **Total** | **24-31 hours** | **1-2 weeks** | - |
+
+---
+
+### Decision Point: When to Proceed
+
+**Stay in Phase 1 (Demo) if:**
+- You're evaluating multiple LMS providers
+- SIMON adoption is uncertain
+- You need to show proof-of-concept quickly
+- Current TrackTally workflow is sufficient
+
+**Move to Phase 2 (Full Integration) when:**
+- SIMON confirms they'll use TrackTally
+- You need to collect SIMON-specific fields (follow-up, detention, etc.)
+- Manual data entry is replacing the export step
+- Multiple schools request SIMON integration
+
+**Key insight:** Phase 1 is production-ready for demos and exports. Phase 2 is only needed when you want to **collect** SIMON-specific data, not just **transform** it.
+
+---
+
 ## SpellTally platform integration plan
 
 - **Database convergence (Neon Postgres)**  
@@ -254,7 +557,7 @@ After first deployment, you MUST create an organization and assign users:
   - Update the three Prisma URLs (`DATABASE_URL` pooler for the app, `DIRECT_DATABASE_URL` owner direct connection, `SHADOW_DATABASE_URL` for migrate dev) per environment/branch.
 
 - **Shared authentication (Google via NextAuth)**  
-  - Reuse or clone the Google OAuth client from SpellTally’s Google Cloud project; add TrackTally domains to authorized origins/redirects.  
+  - Reuse or clone the Google OAuth client from SpellTallyâ€™s Google Cloud project; add TrackTally domains to authorized origins/redirects.  
   - Align admin/teacher provisioning with your existing directory or invite flow, centralizing `ADMIN_EMAILS` (or replacing it with DB-backed role management).  
   - Configure secret storage so both apps pull their Google credentials from the same secure vault.
 
@@ -324,7 +627,7 @@ After first deployment, you MUST create an organization and assign users:
 
 Based on a comprehensive code review conducted January 2025, the following actions are prioritized to improve security, scalability, and maintainability.
 
-### 🎯 IMMEDIATE ACTIONS (Pre-Testing Phase with 1-2 Schools)
+### ðŸŽ¯ IMMEDIATE ACTIONS (Pre-Testing Phase with 1-2 Schools)
 
 **Current Context**: Pre-production testing with 1-2 schools starting next year. Focus on critical security and stability fixes only.
 
@@ -390,7 +693,7 @@ Based on a comprehensive code review conducted January 2025, the following actio
 
 ---
 
-### 📅 PHASED ROLLOUT PLAN (1-2 Schools)
+### ðŸ“… PHASED ROLLOUT PLAN (1-2 Schools)
 
 **Phase 0: Pre-Testing (NOW - Before Schools Start)**
 - Complete 5 immediate actions above
@@ -425,7 +728,7 @@ Based on a comprehensive code review conducted January 2025, the following actio
 
 ---
 
-### 🔒 SECURITY CHECKLIST FOR 1-2 SCHOOLS
+### ðŸ”’ SECURITY CHECKLIST FOR 1-2 SCHOOLS
 
 **Before First School Onboarding:**
 - [x] Security headers configured (already done in `next.config.mjs`)
@@ -443,15 +746,15 @@ Based on a comprehensive code review conducted January 2025, the following actio
 
 ---
 
-### 📊 CAPACITY LIMITS (Current Architecture)
+### ðŸ“Š CAPACITY LIMITS (Current Architecture)
 
 **What Works Fine for 1-2 Schools:**
-- ✅ In-memory rate limiting (single server deployment)
-- ✅ No pagination (< 10K incidents, < 200 students per school)
-- ✅ Synchronous Sheets appends (< 10 concurrent teachers)
-- ✅ N+1 queries in roster (< 20 classrooms per teacher)
-- ✅ CSV imports without batching (< 1K row files)
-- ✅ No distributed caching
+- âœ… In-memory rate limiting (single server deployment)
+- âœ… No pagination (< 10K incidents, < 200 students per school)
+- âœ… Synchronous Sheets appends (< 10 concurrent teachers)
+- âœ… N+1 queries in roster (< 20 classrooms per teacher)
+- âœ… CSV imports without batching (< 1K row files)
+- âœ… No distributed caching
 
 **When You'll Hit Limits:**
 - Incidents Export: ~50K+ incidents (Year 2+)
@@ -482,7 +785,7 @@ Based on a comprehensive code review conducted January 2025, the following actio
 
 ### PWA not installing on iOS
 **Cause**: Must use Safari browser (not Chrome)
-**Fix**: Open in Safari, use Share → Add to Home Screen
+**Fix**: Open in Safari, use Share â†’ Add to Home Screen
 
 ### Offline queue not syncing
 **Cause**: IndexedDB not available or service worker issues
@@ -494,11 +797,11 @@ Based on a comprehensive code review conducted January 2025, the following actio
 
 ---
 
-### 📚 COMPLETE ROADMAP (For Future Reference)
+### ðŸ“š COMPLETE ROADMAP (For Future Reference)
 
 The following items are catalogued for future phases as your deployment scales. **These are NOT needed for initial 1-2 school testing.**
 
-#### CRITICAL (Fix Before Production at Scale) 🔥
+#### CRITICAL (Fix Before Production at Scale) ðŸ”¥
 
 1. **Replace In-Memory Rate Limiter** - **DEFER TO PHASE 3**
    - **Issue**: Current rate limiter (`lib/rate-limit.ts`) uses in-memory Map, won't work across multiple server instances
@@ -523,7 +826,7 @@ The following items are catalogued for future phases as your deployment scales. 
    - **Estimated Effort**: 2-3 hours
    - **Why Deferred**: Low risk with trusted users; Vercel has default limits
 
-#### HIGH PRIORITY (For Scaling Beyond 5 Schools) ⚠️
+#### HIGH PRIORITY (For Scaling Beyond 5 Schools) âš ï¸
 
 4. **Add API Pagination** - **DEFER TO PHASE 2**
    - **Issue**: `/api/admin/students` and `/api/admin/classes` return all records
@@ -553,7 +856,7 @@ The following items are catalogued for future phases as your deployment scales. 
     - **Estimated Effort**: 3-4 hours
     - **When Needed**: Once you have regular code changes from multiple developers
 
-#### MEDIUM PRIORITY (Technical Debt) 📋
+#### MEDIUM PRIORITY (Technical Debt) ðŸ“‹
 
 7. **Refactor Large Components** - **DEFER TO PHASE 3**
     - **Issue**: `LoggerApp.tsx` likely 500+ lines; difficult to maintain
@@ -593,7 +896,7 @@ The following items are catalogued for future phases as your deployment scales. 
     - **Estimated Effort**: 4-6 hours
     - **When Needed**: Before making breaking changes to mobile API
 
-#### LOW PRIORITY (Nice to Have) ✨
+#### LOW PRIORITY (Nice to Have) âœ¨
 
 13. **Add Soft Deletes** - **DEFER TO PHASE 4**
     - **Issue**: Hard deletes for students/classrooms could orphan incidents
@@ -646,7 +949,7 @@ The following items are catalogued for future phases as your deployment scales. 
 
 #### Monitoring & Observability
 
-21. **Configure Sentry Properly** - **ALREADY DONE ✅**
+21. **Configure Sentry Properly** - **ALREADY DONE âœ…**
     - Sentry DSN, PII scrubbing, error sampling already configured
     - Just need to add DSN to production environment variables
 
@@ -663,3 +966,4 @@ The following items are catalogued for future phases as your deployment scales. 
       - High error rates
     - **Estimated Effort**: 3-4 hours
     - **Tool**: Use Sentry alerts (already integrated)
+

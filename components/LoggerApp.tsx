@@ -172,6 +172,7 @@ export function LoggerApp({
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
   const stepPanelRef = useRef<HTMLDivElement | null>(null);
   const swipeOrigin = useRef<{ x: number; y: number } | null>(null);
+  const [rosterLoading, setRosterLoading] = useState(true);
   const role = session?.user?.role ?? "teacher";
   const userEmail = session?.user?.email ?? "";
   const organizationName = session?.user?.organizationName ?? null;
@@ -200,6 +201,7 @@ export function LoggerApp({
 
   const loadRoster = useCallback(async () => {
     if (status !== "authenticated") return;
+    setRosterLoading(true);
     try {
       const response = await fetch("/api/roster", { cache: "no-store" });
       if (!response.ok) {
@@ -225,12 +227,17 @@ export function LoggerApp({
     } catch (error) {
       console.error("Roster load failed", error);
       setToast("Could not load roster.");
+    } finally {
+      setRosterLoading(false);
     }
   }, [status]);
 
   useEffect(() => {
     if (status === "authenticated") {
+      setRosterLoading(true);
       void loadRoster();
+    } else if (status === "unauthenticated") {
+      setRosterLoading(false);
     }
   }, [status, loadRoster]);
 
@@ -1123,7 +1130,7 @@ export function LoggerApp({
     );
   }
 
-  if (status === "authenticated" && classes.length === 0) {
+  if (status === "authenticated" && !rosterLoading && classes.length === 0) {
     return (
       <main className={styles.authWrapper}>
         <section className={styles.authCard}>

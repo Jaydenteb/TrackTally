@@ -9,6 +9,7 @@ type OrgSummary = {
   name: string;
   domain: string;
   active: boolean;
+  lmsProvider: "TRACKTALLY" | "SIMON" | null;
 };
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
 
   const org = await prisma.organization.findUnique({
     where: { id: targetOrgId },
-    select: { id: true, name: true, domain: true, active: true },
+    select: { id: true, name: true, domain: true, active: true, lmsProvider: true },
   });
 
   if (!org) {
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
     name: org.name,
     domain: org.domain,
     active: org.active,
+    lmsProvider: org.lmsProvider,
   };
 
   const response = NextResponse.json({ ok: true, data: payload });

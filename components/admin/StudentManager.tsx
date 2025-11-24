@@ -199,28 +199,46 @@ export function StudentManager({
                   </label>
                 </td>
                 <td style={{ padding: "0.75rem 0.5rem", textAlign: "right" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(`Remove ${student.firstName} ${student.lastName}?`)) {
-                        onDeleteStudent(student.id);
-                        setLocalStudents((current) =>
-                          current.filter((item) => item.id !== student.id),
-                        );
-                      }
-                    }}
-                    style={{
-                      padding: "0.45rem 0.75rem",
-                      borderRadius: "10px",
-                      border: "1px solid #dc2626",
-                      background: "#fef2f2",
-                      color: "#b91c1c",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Remove
-                  </button>
+                  <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                    <a
+                      href={`/admin/students/${student.id}`}
+                      style={{
+                        padding: "0.45rem 0.75rem",
+                        borderRadius: "10px",
+                        border: "1px solid #0f766e",
+                        background: "#ecfeff",
+                        color: "#0f766e",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      View Profile
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Remove ${student.firstName} ${student.lastName}?`)) {
+                          onDeleteStudent(student.id);
+                          setLocalStudents((current) =>
+                            current.filter((item) => item.id !== student.id),
+                          );
+                        }
+                      }}
+                      style={{
+                        padding: "0.45rem 0.75rem",
+                        borderRadius: "10px",
+                        border: "1px solid #dc2626",
+                        background: "#fef2f2",
+                        color: "#b91c1c",
+                        cursor: "pointer",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

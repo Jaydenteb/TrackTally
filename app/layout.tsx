@@ -7,11 +7,11 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { PwaInstallProvider } from "../components/PwaInstallProvider";
 import type { Metadata } from "next";
 
-const APP_NAME = "TrackTally";
+const APP_NAME = "TrackTally™";
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: "Quickly log student behaviour incidents to TrackTally.",
+  description: "Quickly log student behaviour incidents to TrackTally™.",
   manifest: "/manifest.json",
 };
 

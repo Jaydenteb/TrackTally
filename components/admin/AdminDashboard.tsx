@@ -46,9 +46,11 @@ export function AdminDashboard({
   const [optionsDomain, setOptionsDomain] = useState<string | null>(null);
   const [savingOptions, setSavingOptions] = useState(false);
   const [retentionDays, setRetentionDays] = useState<number>(365);
-  const [organization, setOrganization] = useState<{ name: string | null; domain: string | null } | null>(
-    initialOrganization,
-  );
+  const [organization, setOrganization] = useState<{
+    name: string | null;
+    domain: string | null;
+    lmsProvider?: "TRACKTALLY" | "SIMON" | null;
+  } | null>(initialOrganization);
   const [cleanupRunning, setCleanupRunning] = useState(false);
 
   const buildUrl = useCallback(
@@ -108,10 +110,15 @@ export function AdminDashboard({
 
   const loadOrganization = useCallback(async () => {
     try {
-      const payload = await fetchJson<{ ok: boolean; data: { name: string; domain: string } }>(
-        buildUrl("/api/admin/organization"),
-      );
-      setOrganization({ name: payload.data?.name ?? null, domain: payload.data?.domain ?? null });
+      const payload = await fetchJson<{
+        ok: boolean;
+        data: { name: string; domain: string; lmsProvider?: "TRACKTALLY" | "SIMON" | null };
+      }>(buildUrl("/api/admin/organization"));
+      setOrganization({
+        name: payload.data?.name ?? null,
+        domain: payload.data?.domain ?? null,
+        lmsProvider: payload.data?.lmsProvider ?? null,
+      });
     } catch {
       // fall back to whatever was provided initially
       setOrganization((prev) => prev ?? initialOrganization);
@@ -210,6 +217,26 @@ export function AdminDashboard({
               </>
             ) : null}
           </p>
+          {organization?.lmsProvider && organization.lmsProvider !== "TRACKTALLY" && (
+            <div
+              style={{
+                marginTop: "0.5rem",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.35rem 0.75rem",
+                borderRadius: "8px",
+                background: "#ecfeff",
+                border: "1px solid #06b6d4",
+                fontSize: "0.8rem",
+              }}
+            >
+              <span style={{ fontSize: "1rem" }}>🏫</span>
+              <span style={{ fontWeight: 600, color: "#0e7490" }}>
+                {organization.lmsProvider === "SIMON" ? "SIMON LMS" : organization.lmsProvider}
+              </span>
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: 'center', flexWrap: 'wrap' }}>
           <a
@@ -226,6 +253,22 @@ export function AdminDashboard({
           >
             Analytics
           </a>
+          {organization?.lmsProvider && organization.lmsProvider !== "TRACKTALLY" && (
+            <a
+              href="/admin/lms-export"
+              style={{
+                border: "1px solid #06b6d4",
+                padding: "0.45rem 0.75rem",
+                borderRadius: "10px",
+                textDecoration: "none",
+                color: "#0e7490",
+                background: "#ecfeff",
+                fontWeight: 600,
+              }}
+            >
+              LMS Export
+            </a>
+          )}
           <a
             href="/admin/incidents"
             style={{

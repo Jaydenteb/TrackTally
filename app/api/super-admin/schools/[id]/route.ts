@@ -23,13 +23,16 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "Invalid payload." }, { status: 400 });
   }
 
-  const { name, domain, active, options } = body as Record<string, unknown>;
+  const { name, domain, active, lmsProvider, options } = body as Record<string, unknown>;
 
   try {
     const updated = await updateOrganization(params.id, {
       name: typeof name === "string" ? name.trim() : undefined,
       domain: typeof domain === "string" ? domain.trim().toLowerCase() : undefined,
       active: typeof active === "boolean" ? active : undefined,
+      lmsProvider: typeof lmsProvider === "string" && (lmsProvider === "TRACKTALLY" || lmsProvider === "SIMON")
+        ? lmsProvider
+        : undefined,
       options: options && typeof options === "object" ? normalizeOptions(options as any) : undefined,
     });
     const response = NextResponse.json({ ok: true, data: updated });

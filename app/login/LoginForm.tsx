@@ -23,7 +23,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
       : " Access is limited to approved domains.";
     switch (error) {
       case "AccessDenied":
-        return `Your Google account isn’t allowed.${domainMsg}`;
+        return `Your Google account isn't allowed.${domainMsg}`;
       case "OAuthSignin":
       case "OAuthCallback":
       case "OAuthCreateAccount":
@@ -33,7 +33,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
       case "Configuration":
         return "Authentication is not fully configured. Please try again later.";
       default:
-        return "We couldn’t sign you in. Please try again.";
+        return "We couldn't sign you in. Please try again.";
     }
   }, [error, allowedDomain]);
 
@@ -45,7 +45,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
     return (
       <main className={styles.page}>
         <section className={styles.card}>
-          <h1 className={styles.title}>TrackTally</h1>
+          <h1 className={styles.title}>TrackTally™</h1>
           <p className={styles.subtitle}>
             Authentication is not configured. Add these environment variables to
             `.env.local` and restart the dev server:
@@ -74,7 +74,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
     <main className={styles.page}>
       <section className={styles.card}>
         <header>
-          <h1 className={styles.title}>Sign in to TrackTally</h1>
+          <h1 className={styles.title}>Sign in to TrackTally™</h1>
           <p className={styles.subtitle}>
             Use your school Google Workspace account to continue.
             {allowedDomain ? (
@@ -101,7 +101,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
           </span>
         </button>
         <p className={styles.subtitle}>
-          Trouble signing in? Contact your admin{allowedDomain ? ` at ${allowedDomain}` : ""}.
+          Trouble signing in? Contact your school&apos;s admin.
         </p>
       </section>
     </main>

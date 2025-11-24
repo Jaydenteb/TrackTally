@@ -120,6 +120,7 @@ export async function listOrganizations() {
       name: org.name,
       domain: org.domain,
       active: org.active,
+      lmsProvider: org.lmsProvider,
       createdAt: org.createdAt.toISOString(),
       updatedAt: org.updatedAt.toISOString(),
       options: await readOptions(org.id),
@@ -150,6 +151,7 @@ export async function updateOrganization(
     name?: string;
     domain?: string;
     active?: boolean;
+    lmsProvider?: "TRACKTALLY" | "SIMON";
     options?: IncidentOptionGroups;
   },
 ) {
@@ -163,6 +165,7 @@ export async function updateOrganization(
       name: patch.name,
       domain: patch.domain,
       active: patch.active,
+      lmsProvider: patch.lmsProvider,
     },
   });
 

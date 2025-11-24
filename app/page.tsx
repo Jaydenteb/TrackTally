@@ -72,7 +72,7 @@ export default async function HomePage() {
                 width: "fit-content",
               }}
             >
-              <span>TrackTally</span>
+              <span>TrackTally™</span>
               <span style={{ opacity: 0.7 }}>Behaviour incident logging</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -97,7 +97,7 @@ export default async function HomePage() {
                   maxWidth: "36rem",
                 }}
               >
-                TrackTally is a mobile‑first incident logger for schools. Teachers tap a student,
+                TrackTally™ is a mobile-first incident logger for schools. Teachers tap a student,
                 choose a level and category, optionally dictate a note, and it syncs straight to
                 Google Sheets and a secure database for reporting.
               </p>

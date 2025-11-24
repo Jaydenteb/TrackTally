@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IncidentOptionGroups, OptionManager } from "../admin/OptionManager";
+import { LmsMappingPreview } from "./LmsMappingPreview";
 
 type SchoolRecord = {
   id: string;
   name: string;
   domain: string;
   active: boolean;
+  lmsProvider: "TRACKTALLY" | "SIMON" | null;
   updatedAt: string;
 };
 
@@ -333,6 +335,38 @@ export function SuperAdminDashboard() {
               }}
             />
           </label>
+          <label style={{ display: "grid", gap: "0.4rem" }}>
+            <span style={{ fontWeight: 600 }}>LMS Provider</span>
+            <select
+              value={selectedSchool.lmsProvider || "TRACKTALLY"}
+              onChange={(event) =>
+                handleUpdateSchool(selectedSchool.id, {
+                  lmsProvider: event.target.value as "TRACKTALLY" | "SIMON"
+                })
+              }
+              style={{
+                borderRadius: "12px",
+                border: "1px solid #cbd5f5",
+                padding: "0.75rem",
+                background: "white",
+                cursor: "pointer",
+              }}
+            >
+              <option value="TRACKTALLY">TrackTally (Default)</option>
+              <option value="SIMON">SIMON LMS</option>
+            </select>
+            <span style={{ fontSize: "0.85rem", color: "#64748b", marginTop: "-0.2rem" }}>
+              {selectedSchool.lmsProvider === "SIMON"
+                ? "Using SIMON Learning Management System field mapping"
+                : "Using standard TrackTally incident tracking format"
+              }
+            </span>
+          </label>
+          {selectedSchool.lmsProvider && (
+            <LmsMappingPreview
+              provider={selectedSchool.lmsProvider as "TRACKTALLY" | "SIMON"}
+            />
+          )}
           <OptionManager
             options={options}
             saving={savingOptions}
