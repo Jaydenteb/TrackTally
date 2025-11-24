@@ -309,10 +309,14 @@ export function SuperAdminDashboard() {
             <span style={{ fontWeight: 600 }}>Display name</span>
             <input
               type="text"
+              key={`name-${selectedSchool.id}`}
               defaultValue={selectedSchool.name}
-              onBlur={(event) =>
-                handleUpdateSchool(selectedSchool.id, { name: event.target.value })
-              }
+              onBlur={((schoolId, originalName) => (event: React.FocusEvent<HTMLInputElement>) => {
+                const newName = event.target.value;
+                if (newName !== originalName) {
+                  handleUpdateSchool(schoolId, { name: newName });
+                }
+              })(selectedSchool.id, selectedSchool.name)}
               style={{
                 borderRadius: "12px",
                 border: "1px solid #cbd5f5",
@@ -324,10 +328,14 @@ export function SuperAdminDashboard() {
             <span style={{ fontWeight: 600 }}>Primary domain</span>
             <input
               type="text"
+              key={`domain-${selectedSchool.id}`}
               defaultValue={selectedSchool.domain}
-              onBlur={(event) =>
-                handleUpdateSchool(selectedSchool.id, { domain: event.target.value })
-              }
+              onBlur={((schoolId, originalDomain) => (event: React.FocusEvent<HTMLInputElement>) => {
+                const newDomain = event.target.value;
+                if (newDomain !== originalDomain) {
+                  handleUpdateSchool(schoolId, { domain: newDomain });
+                }
+              })(selectedSchool.id, selectedSchool.domain)}
               style={{
                 borderRadius: "12px",
                 border: "1px solid #cbd5f5",
