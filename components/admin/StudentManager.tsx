@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { ClassRecord, StudentRecord } from "./types";
 
 type Props = {
@@ -8,6 +8,13 @@ type Props = {
   selectedClassId: string | null;
   students: StudentRecord[];
   onSelectClass: (id: string | null) => void;
+  onCreateStudent: (payload: {
+    studentId: string;
+    firstName: string;
+    lastName: string;
+    classroomId?: string | null;
+    guardians?: string | null;
+  }) => void;
   onUpdateStudent: (id: string, patch: Record<string, unknown>) => void;
   onDeleteStudent: (id: string) => void;
 };
@@ -17,19 +24,53 @@ export function StudentManager({
   selectedClassId,
   students,
   onSelectClass,
+  onCreateStudent,
   onUpdateStudent,
   onDeleteStudent,
 }: Props) {
   const [localStudents, setLocalStudents] = useState<StudentRecord[]>(students);
+  const [newStudent, setNewStudent] = useState({
+    studentId: "",
+    firstName: "",
+    lastName: "",
+    classroomId: selectedClassId || "",
+    guardians: "",
+  });
 
   useEffect(() => {
     setLocalStudents(students);
   }, [students]);
 
+  useEffect(() => {
+    // Update the new student form's classroom when selected class changes
+    if (selectedClassId) {
+      setNewStudent((prev) => ({ ...prev, classroomId: selectedClassId }));
+    }
+  }, [selectedClassId]);
+
   function updateLocalStudent(id: string, patch: Partial<StudentRecord>) {
     setLocalStudents((current) =>
       current.map((student) => (student.id === id ? { ...student, ...patch } : student)),
     );
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    onCreateStudent({
+      studentId: newStudent.studentId,
+      firstName: newStudent.firstName,
+      lastName: newStudent.lastName,
+      classroomId: newStudent.classroomId || null,
+      guardians: newStudent.guardians || null,
+    });
+    // Reset form
+    setNewStudent({
+      studentId: "",
+      firstName: "",
+      lastName: "",
+      classroomId: selectedClassId || "",
+      guardians: "",
+    });
   }
 
   const activeClasses = classes.filter((cls) => !cls.archived);
@@ -46,6 +87,103 @@ export function StudentManager({
       }}
     >
       <h2 style={{ margin: 0, fontSize: "1.4rem", color: "#0f172a" }}>Students</h2>
+
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: "grid",
+          gap: "0.75rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          background: "#f8fafc",
+          padding: "1rem",
+          borderRadius: "16px",
+        }}
+      >
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>Student ID</span>
+          <input
+            required
+            type="text"
+            value={newStudent.studentId}
+            onChange={(event) =>
+              setNewStudent((prev) => ({ ...prev, studentId: event.target.value }))
+            }
+            placeholder="e.g. 12345"
+            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>First name</span>
+          <input
+            required
+            type="text"
+            value={newStudent.firstName}
+            onChange={(event) =>
+              setNewStudent((prev) => ({ ...prev, firstName: event.target.value }))
+            }
+            placeholder="First name"
+            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>Last name</span>
+          <input
+            required
+            type="text"
+            value={newStudent.lastName}
+            onChange={(event) =>
+              setNewStudent((prev) => ({ ...prev, lastName: event.target.value }))
+            }
+            placeholder="Last name"
+            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+          />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>Assign to class</span>
+          <select
+            value={newStudent.classroomId}
+            onChange={(event) =>
+              setNewStudent((prev) => ({ ...prev, classroomId: event.target.value }))
+            }
+            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+          >
+            <option value="">Unassigned</option>
+            {activeClasses.map((cls) => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          <span style={{ fontWeight: 600, color: "#0f172a" }}>Guardian emails (optional)</span>
+          <input
+            type="text"
+            value={newStudent.guardians}
+            onChange={(event) =>
+              setNewStudent((prev) => ({ ...prev, guardians: event.target.value }))
+            }
+            placeholder="parent@email.com"
+            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+          />
+        </label>
+        <div style={{ display: "flex", alignItems: "flex-end" }}>
+          <button
+            type="submit"
+            style={{
+              padding: "0.75rem 1.2rem",
+              borderRadius: "12px",
+              border: "none",
+              background: "#0f766e",
+              color: "white",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Add student
+          </button>
+        </div>
+      </form>
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
         <select
           value={selectedClassId ?? ""}

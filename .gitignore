@@ -3,6 +3,7 @@ node_modules
 *.log
 .env
 .env.local
+.env.production
 prisma/tracktally.db
 prisma/tracktally.db-journal
 

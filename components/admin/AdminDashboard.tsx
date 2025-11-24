@@ -437,6 +437,15 @@ export function AdminDashboard({
         selectedClassId={selectedClassId}
         students={students}
         onSelectClass={(id) => setSelectedClassId(id)}
+        onCreateStudent={async (payload) => {
+          await fetchJson(buildUrl("/api/admin/students"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          report("Student added.");
+          await loadStudents(selectedClassId);
+        }}
         onUpdateStudent={async (id, patch) => {
           await fetchJson(buildUrl(`/api/admin/students/${id}`), {
             method: "PATCH",
