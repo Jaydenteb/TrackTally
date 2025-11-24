@@ -240,7 +240,21 @@ export function AdminDashboard({
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: 'center', flexWrap: 'wrap' }}>
           <a
-            href="/admin/analytics"
+            href={impersonatedDomain ? `/admin?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin"}
+            style={{
+              border: "1px solid #cbd5f5",
+              padding: "0.45rem 0.75rem",
+              borderRadius: "10px",
+              textDecoration: "none",
+              color: "#0f172a",
+              background: "#f8fafc",
+              fontWeight: 600,
+            }}
+          >
+            Admin
+          </a>
+          <a
+            href={impersonatedDomain ? `/admin/analytics?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/analytics"}
             style={{
               border: "1px solid #0f766e",
               padding: "0.45rem 0.75rem",
@@ -255,7 +269,7 @@ export function AdminDashboard({
           </a>
           {organization?.lmsProvider && organization.lmsProvider !== "TRACKTALLY" && (
             <a
-              href="/admin/lms-export"
+              href={impersonatedDomain ? `/admin/lms-export?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/lms-export"}
               style={{
                 border: "1px solid #06b6d4",
                 padding: "0.45rem 0.75rem",
@@ -270,7 +284,7 @@ export function AdminDashboard({
             </a>
           )}
           <a
-            href="/admin/incidents"
+            href={impersonatedDomain ? `/admin/incidents?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/incidents"}
             style={{
               border: "1px solid #cbd5f5",
               padding: "0.45rem 0.75rem",
@@ -296,20 +310,6 @@ export function AdminDashboard({
             }}
           >
             Incident logger
-          </a>
-          <a
-            href="/admin/incidents"
-            style={{
-              border: "1px solid #cbd5f5",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-              color: "#0f172a",
-              background: "#f8fafc",
-              fontWeight: 600,
-            }}
-          >
-            View incidents
           </a>
           <a
             href="/api/health"
