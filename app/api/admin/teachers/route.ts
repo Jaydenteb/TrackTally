@@ -136,11 +136,13 @@ export async function POST(request: Request) {
         role: parsed.data.role,
         isSpecialist: parsed.data.isSpecialist,
         organizationId: targetOrgId,
-        classes: {
-          create: classroomIds.map((classroomId) => ({
-            classroom: { connect: { id: classroomId } },
-          })),
-        },
+        classes: classroomIds.length > 0
+          ? {
+              create: classroomIds.map((classroomId) => ({
+                classroom: { connect: { id: classroomId } },
+              })),
+            }
+          : undefined,
       },
       include: {
         classes: { include: { classroom: true } },
@@ -152,10 +154,11 @@ export async function POST(request: Request) {
       Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));
     }
     return response;
-  } catch (err) {
+  } catch (err: any) {
     console.error("Failed to create teacher", err);
+    const errorMessage = err?.message || "Could not create teacher.";
     return NextResponse.json(
-      { ok: false, error: "Could not create teacher." },
+      { ok: false, error: errorMessage },
       { status: 500 },
     );
   }
