@@ -8,7 +8,16 @@
       "Bash(git commit:*)",
       "Bash(git push)",
       "Bash(npm run build:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx prisma:*)",
+      "Bash(git restore:*)",
+      "Bash(cat:*)",
+      "Bash(git reset:*)",
+      "Bash(set -a)",
+      "Bash(source .env.production:*)",
+      "Bash(set +a)",
+      "Bash(npm run recover:*)"
     ],
     "deny": [],
     "ask": []

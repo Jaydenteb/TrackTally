@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "recover": "tsx scripts/recover-from-sheets.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.12.1",
@@ -39,6 +40,7 @@
     "eslint-config-next": "15.0.0-canary.53",
     "jsdom": "^23.0.1",
     "pg": "^8.16.3",
+    "tsx": "^4.7.0",
     "typescript": "^5.4.5",
     "vitest": "^1.1.0"
   }

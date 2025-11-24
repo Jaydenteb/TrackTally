@@ -1,8 +1,76 @@
 -- ============================================================================
 -- COMPLETE DATABASE MIGRATION FOR TRACKTALLY
 -- This file combines all migrations plus the LMS provider feature
--- Run this in your Neon SQL Editor to set up the entire database
+--
+-- ⚠️  WARNING: THIS SCRIPT IS FOR EMPTY DATABASES ONLY ⚠️
+--
+-- This script will CREATE all tables from scratch. If your database already
+-- has data, running this script will cause DATA LOSS.
+--
+-- SAFETY CHECK: The script will check for existing data and ABORT if found.
+--
+-- Use this script ONLY for:
+-- - Setting up a brand new database
+-- - Resetting a development/test database (after manual confirmation)
+--
+-- For adding features to existing databases, use individual migration files.
 -- ============================================================================
+
+-- Safety check: Abort if database already contains data
+DO $$
+DECLARE
+  teacher_count INTEGER := 0;
+  incident_count INTEGER := 0;
+  org_count INTEGER := 0;
+BEGIN
+  -- Check if tables exist and have data
+  BEGIN
+    SELECT COUNT(*) INTO org_count FROM "Organization";
+  EXCEPTION WHEN undefined_table THEN
+    org_count := 0;
+  END;
+
+  BEGIN
+    SELECT COUNT(*) INTO teacher_count FROM "Teacher";
+  EXCEPTION WHEN undefined_table THEN
+    teacher_count := 0;
+  END;
+
+  BEGIN
+    SELECT COUNT(*) INTO incident_count FROM "Incident";
+  EXCEPTION WHEN undefined_table THEN
+    incident_count := 0;
+  END;
+
+  -- If any data exists, abort
+  IF org_count > 0 OR teacher_count > 0 OR incident_count > 0 THEN
+    RAISE EXCEPTION '
+    ╔════════════════════════════════════════════════════════════════════╗
+    ║                      ⚠️  SAFETY CHECK FAILED  ⚠️                   ║
+    ╠════════════════════════════════════════════════════════════════════╣
+    ║                                                                    ║
+    ║  This database contains existing data:                             ║
+    ║    - Organizations: % record(s)                                    ║
+    ║    - Teachers: % record(s)                                         ║
+    ║    - Incidents: % record(s)                                        ║
+    ║                                                                    ║
+    ║  Running this migration would result in DATA LOSS!                 ║
+    ║                                                                    ║
+    ║  This script is designed for EMPTY databases only.                 ║
+    ║                                                                    ║
+    ║  If you need to:                                                   ║
+    ║    • Add new features: Use individual migration files              ║
+    ║    • Reset database: Manually drop tables first (after backup!)    ║
+    ║    • Restore data: See docs/ops/backup-restore.md                  ║
+    ║                                                                    ║
+    ║  For help, see RECOVERY-GUIDE.md or contact support.               ║
+    ║                                                                    ║
+    ╚════════════════════════════════════════════════════════════════════╝
+    ', org_count, teacher_count, incident_count;
+  END IF;
+
+  RAISE NOTICE '✅ Safety check passed: Database is empty. Proceeding with migration...';
+END $$;
 
 -- ============================================================================
 -- MIGRATION 1: Initial Schema (20251105_init_postgres)
