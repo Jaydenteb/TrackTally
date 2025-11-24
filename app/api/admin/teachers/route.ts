@@ -106,13 +106,16 @@ export async function POST(request: Request) {
 
   const classroomIds = Array.from(new Set(parsed.data.classroomIds));
   const displayName = sanitizeOptional(parsed.data.displayName);
-  const emailDomain = parsed.data.email.toLowerCase().split("@")[1] ?? "";
-  if (emailDomain !== targetOrg.domain) {
-    return NextResponse.json(
-      { ok: false, error: "Email domain does not match this organization." },
-      { status: 400 },
-    );
-  }
+
+  // TODO: Re-enable email domain validation in production
+  // For now, allowing any email domain for testing multiple organizations
+  // const emailDomain = parsed.data.email.toLowerCase().split("@")[1] ?? "";
+  // if (emailDomain !== targetOrg.domain) {
+  //   return NextResponse.json(
+  //     { ok: false, error: "Email domain does not match this organization." },
+  //     { status: 400 },
+  //   );
+  // }
 
   const classrooms = await prisma.classroom.findMany({
     where: { id: { in: classroomIds }, organizationId: targetOrgId },
