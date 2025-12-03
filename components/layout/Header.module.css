@@ -1,0 +1,93 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.welcome {
+  flex: 1;
+  min-width: 0;
+}
+
+.welcomeLabel {
+  display: none;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .welcomeLabel {
+    display: block;
+  }
+}
+
+.welcomeName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .welcomeName {
+    font-size: 1.25rem;
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .actions {
+    gap: 1rem;
+  }
+}
+
+.roleBadge {
+  display: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--border-base);
+  background: var(--interactive-base);
+  color: var(--text-muted);
+}
+
+@media (min-width: 640px) {
+  .roleBadge {
+    display: inline-block;
+  }
+}
+
+.adminBadge {
+  background: var(--brand-gradient);
+  border-color: transparent;
+  color: white;
+}

@@ -1,0 +1,151 @@
+.container {
+  display: grid;
+  gap: 1.5rem;
+  width: min(1080px, 100%);
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: var(--surface-base);
+  border-radius: 20px;
+  box-shadow: 0 25px 55px -40px rgba(15, 23, 42, 0.35);
+  padding: 1.25rem 1.5rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.75rem;
+  color: var(--text-main);
+}
+
+.lmsBadge {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  background: #ecfeff;
+  border: 1px solid #06b6d4;
+  font-size: 0.8rem;
+}
+
+.lmsBadgeIcon {
+  font-size: 1rem;
+}
+
+.lmsBadgeText {
+  font-weight: 600;
+  color: #0e7490;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Message banner */
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #ecfeff;
+  border: 1px solid var(--tt-primary);
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+/* Super Admin notice */
+.superAdminNotice {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: #ecfeff;
+  border: 1px solid var(--tt-primary);
+  color: var(--text-main);
+}
+
+.superAdminNotice a {
+  color: var(--tt-primary);
+  font-weight: 600;
+}
+
+/* Options section */
+.optionsSection {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.optionsDomainText {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* Cleanup section */
+.cleanupSection {
+  background: var(--surface-base);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 20px 40px -32px rgba(15, 23, 42, 0.4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cleanupInfo {
+  max-width: 520px;
+}
+
+.cleanupTitle {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.cleanupDescription {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.cleanupButton {
+  padding: 0.65rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid var(--tt-primary);
+  background: var(--tt-primary);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 220px;
+  text-align: center;
+  transition: background 150ms ease;
+}
+
+.cleanupButton:hover {
+  background: var(--tt-primary-hover);
+}
+
+.cleanupButton:disabled {
+  background: var(--surface-muted);
+  color: var(--tt-primary);
+  cursor: not-allowed;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  color: var(--text-subtle);
+  font-size: 0.85rem;
+}
+
+/* Error text */
+.errorText {
+  color: var(--text-muted);
+  margin: 0;
+}

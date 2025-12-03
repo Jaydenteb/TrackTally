@@ -1,0 +1,283 @@
+.section {
+  background: var(--surface-base);
+  border-radius: 20px;
+  box-shadow: 0 25px 55px -40px rgba(15, 23, 42, 0.35);
+  padding: 1.75rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+
+.activeCount {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* Form */
+.form {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  background: var(--surface-muted);
+  padding: 1rem;
+  border-radius: 16px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.input {
+  padding: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  font-size: inherit;
+  color: var(--text-main);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:hover:not(:focus) {
+  border-color: var(--tt-primary-hover);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--tt-primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.select {
+  padding: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  font-size: inherit;
+  color: var(--text-main);
+}
+
+.submitWrapper {
+  display: flex;
+  align-items: flex-end;
+}
+
+.submitButton {
+  padding: 0.75rem 1.2rem;
+  border-radius: 12px;
+  border: none;
+  background: var(--tt-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.submitButton:hover {
+  background: var(--tt-primary-hover);
+}
+
+/* Class cards list */
+.classList {
+  display: grid;
+  gap: 1rem;
+}
+
+.classCard {
+  border: 1px solid var(--border-base);
+  border-radius: 16px;
+  padding: 1rem;
+  background: var(--surface-base);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.classCard:hover {
+  border-color: var(--border-focus);
+  box-shadow: 0 8px 24px -12px rgba(15, 23, 42, 0.15);
+}
+
+.classCardArchived {
+  border: 1px solid var(--border-base);
+  border-radius: 16px;
+  padding: 1rem;
+  background: var(--surface-muted);
+  opacity: 0.6;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.className {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.classCode {
+  color: var(--text-muted);
+}
+
+.studentCount {
+  margin: 0.25rem 0;
+  color: var(--text-muted);
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.archiveButton {
+  padding: 0.5rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--surface-muted);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.archiveButton:hover {
+  background: var(--interactive-hover);
+}
+
+.importLabel {
+  padding: 0.5rem 0.85rem;
+  border-radius: 12px;
+  border: 1px dashed var(--border-focus);
+  background: var(--surface-muted);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.importLabel:hover {
+  background: var(--interactive-hover);
+}
+
+.hiddenInput {
+  display: none;
+}
+
+/* Card form fields */
+.cardForm {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.cardSelect {
+  padding: 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+}
+
+.cardSelectMultiple {
+  padding: 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  min-height: 120px;
+}
+
+/* Import Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1.5rem;
+}
+
+.modalContent {
+  background: var(--surface-base);
+  border-radius: 20px;
+  padding: 1.5rem;
+  width: min(520px, 100%);
+  display: grid;
+  gap: 1rem;
+  box-shadow: 0 30px 60px -40px rgba(15, 23, 42, 0.6);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--text-main);
+}
+
+.modalDescription {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+}
+
+.modalSelect {
+  padding: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.cancelButton {
+  padding: 0.65rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--surface-muted);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-main);
+  transition: background 150ms ease;
+}
+
+.cancelButton:hover {
+  background: var(--interactive-hover);
+}
+
+.importButton {
+  padding: 0.65rem 1.1rem;
+  border-radius: 12px;
+  border: none;
+  background: var(--tt-primary);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 150ms ease;
+}
+
+.importButton:hover {
+  background: var(--tt-primary-hover);
+}
+
+/* Error text */
+.errorText {
+  color: var(--text-muted);
+  margin: 0;
+}

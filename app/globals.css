@@ -1,23 +1,80 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  --primary-gradient-start: #33d0f5;
-  --primary-gradient-end: #6d3cff;
-  --primary-mid: #5a62ff;
-  --primary-dark: #3d2fd6;
+  /* Brand colors */
+  --brand-gradient-start: #33d0f5;
+  --brand-gradient-end: #6d3cff;
+  --brand-gradient: linear-gradient(120deg, var(--brand-gradient-start), var(--brand-gradient-end));
+  --brand-mid: #5a62ff;
+  --brand-dark: #3d2fd6;
+
+  /* Legacy aliases (for backwards compatibility) */
+  --primary-gradient-start: var(--brand-gradient-start);
+  --primary-gradient-end: var(--brand-gradient-end);
+  --primary-mid: var(--brand-mid);
+  --primary-dark: var(--brand-dark);
+
+  /* Accent colors */
   --accent-celebration: #ff9d6c;
   --accent-teal: #23e6e0;
   --accent-purple: #7a58ff;
+
+  /* Text colors */
   --text-main: #0b1220;
   --text-muted: #42557a;
+  --text-subtle: #64748b;
+  --text-disabled: #94a3b8;
+
+  /* Surface colors */
   --surface-base: #ffffff;
   --surface-muted: #f6f8fc;
   --surface-subtle: #eef3fb;
+  --surface-overlay: rgba(255, 255, 255, 0.8);
+
+  /* Border colors */
+  --border-base: #e2e8f0;
+  --border-subtle: #f1f5f9;
+  --border-focus: #cbd5e1;
   --border-muted: rgba(58, 76, 130, 0.22);
+
+  /* Interactive element colors */
+  --interactive-base: #ffffff;
+  --interactive-hover: #f8fafc;
+  --interactive-active: #f1f5f9;
+  --interactive-text: #334155;
+  --interactive-text-hover: #0f172a;
+
+  /* TrackTally specific - teal accent */
+  --tt-primary: #0f766e;
+  --tt-primary-hover: #0d5f58;
+  --tt-primary-light: #ecfeff;
+
+  /* Shadows */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);
   --shadow-md: 0 6px 20px rgba(24, 34, 72, 0.12);
   --shadow-lg: 0 16px 40px rgba(24, 34, 72, 0.16);
+  --shadow-card: 0 8px 24px rgba(16, 23, 58, 0.12);
+
+  /* Animation */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms var(--ease-standard);
+  --transition-normal: 200ms var(--ease-standard);
+}
+
+/* Glass panel effect for headers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+/* Card surface for content containers */
+.card-surface {
+  background: var(--surface-base);
+  border-radius: 24px;
+  box-shadow: var(--shadow-card);
 }
 
 body {

@@ -28,7 +28,117 @@ TrackTally™ is a Next.js 15 PWA that records classroom behaviour incidents dir
 
 **See**: `IMPLEMENTATION-SUMMARY.md` for complete implementation details and testing checklist.
 
-## Priority: Super Admin & Multiâ€‘Tenant Auth
+### ✅ Manual Student Creation & Super Admin Multi-Org Access (Latest)
+- **Student Creation**: Added student creation form in admin dashboard with fields for Student ID, names, class assignment, and guardian emails
+- **Super Admin Organization Switcher**: Super admins can now view and log incidents for any organization without needing separate accounts
+- **Multi-Org Roster API**: `/api/roster` now accepts `?domain=` parameter for super admins to access rosters across all schools
+- **Organization Selector UI**: Incident logger includes organization dropdown for super admins to switch between schools
+
+### 🎯 What's Next
+- **Testing**: Verify super admin can successfully switch between organizations and log incidents for different schools
+- **Student Profile Pages**: Complete implementation of individual student profile pages with incident history (routes already created at `/admin/students/[id]`)
+- **Organization Switcher for Other Pages**: Consider adding organization selector to analytics dashboard and other admin pages for super admins
+- **Privacy & Terms Pages**: Complete the privacy policy and terms of service pages (routes created, content needed)
+
+## UI/UX Improvement Plan (9 Weeks, 84-108 Hours)
+
+### Critical Issues Identified
+- **LoggerApp.tsx**: 1,337 lines with 178 state variables and 35 useEffects (needs componentization)
+- **385+ inline styles** scattered across admin components (needs CSS modules consolidation)
+- **Confusing navigation**: All roles see all links, no active page indicator
+- **Super admin impersonation**: Subtle visual indication when viewing other schools
+
+### Quick Wins (Ready to Start)
+- [x] **Quick Win 1**: Create Button component (2h) - Replace 25+ inline button styles ✅
+- [x] **Quick Win 2**: Add role banner for super admin (3h) - Make school impersonation obvious ✅
+- [x] **Quick Win 3**: Hide unauthorized nav links (1h) - Only show relevant role links ✅
+- [x] **Quick Win 4**: Active tab indicator (2h) - Highlight current page ✅
+
+### Phase 1: Foundation (Week 1-2, 16-20h)
+- [x] Create `components/ui/Button.tsx` - Primary/secondary/outline/danger variants ✅
+- [ ] Create `components/ui/FormField.tsx` - Consistent form field styling
+- [ ] Create `components/ui/Card.tsx` - Section card wrapper
+- [ ] Create `components/ui/NavTabs.tsx` - Tabbed navigation component
+- [x] Create CSS modules for shared styles ✅
+- [x] Replace first 10 inline style usages as proof-of-concept ✅
+  - AdminDashboard: 8 buttons replaced (~140 lines saved)
+  - StudentManager: 3 buttons replaced (~45 lines saved)
+
+### Phase 2: Navigation & Role System (Week 3, 12-16h)
+- [ ] Create `components/layout/Header.tsx` - Role-aware menu with dropdown
+- [x] Create `components/layout/RoleBanner.tsx` - Super admin impersonation indicator ✅
+- [ ] Create `components/layout/Breadcrumbs.tsx` - Navigation breadcrumbs
+- [ ] Update `app/layout.tsx` to use new components
+- [ ] Add active page indicators
+- [ ] Hide unauthorized role links based on user permissions
+
+### Phase 3: Break Up LoggerApp (Week 4-5, 20-24h)
+- [ ] Create `components/logger/LoggerContainer.tsx` (150 lines)
+- [ ] Create `components/logger/OrgSwitcher.tsx` (80 lines)
+- [ ] Create `components/logger/IncidentWizard.tsx` (200 lines)
+- [ ] Extract step components:
+  - [ ] `steps/StudentStep.tsx` (150 lines)
+  - [ ] `steps/TypeStep.tsx` (80 lines)
+  - [ ] `steps/LevelStep.tsx` (120 lines)
+  - [ ] `steps/CategoryStep.tsx` (100 lines)
+  - [ ] `steps/LocationStep.tsx` (100 lines)
+  - [ ] `steps/ActionStep.tsx` (100 lines)
+  - [ ] `steps/ReviewStep.tsx` (150 lines)
+- [ ] Create `components/logger/StudentSelector.tsx` (180 lines)
+- [ ] Create `components/logger/OfflineQueue.tsx` (120 lines)
+- [ ] Create custom hooks:
+  - [ ] `hooks/useIncidentForm.ts` (100 lines)
+  - [ ] `hooks/useRoster.ts` (80 lines)
+  - [ ] `hooks/useOfflineQueue.ts` (100 lines)
+  - [ ] `hooks/useSpeechRecognition.ts` (60 lines)
+
+### Phase 4: Admin Dashboard Redesign (Week 6-7, 16-20h)
+- [ ] Create `components/admin/AdminLayout.tsx` - Tabbed interface wrapper
+- [ ] Create section components:
+  - [ ] `sections/RosterSection.tsx`
+  - [ ] `sections/AnalyticsSection.tsx`
+  - [ ] `sections/IncidentsSection.tsx`
+  - [ ] `sections/SettingsSection.tsx`
+- [ ] Extract panel components:
+  - [ ] `panels/ClassesPanel.tsx`
+  - [ ] `panels/TeachersPanel.tsx`
+  - [ ] `panels/StudentsPanel.tsx`
+- [ ] Consolidate all forms to use `FormField` component
+- [ ] Replace all inline styles with CSS modules
+
+### Phase 5: Mobile Responsiveness (Week 8, 8-12h)
+- [ ] Add mobile-first CSS for all new components
+- [ ] Create hamburger menu for admin nav (<768px)
+- [ ] Add collapsed filters with expand button
+- [ ] Ensure touch-friendly button sizes (min 44px)
+- [ ] Test on iOS Safari and Android Chrome
+
+### Phase 6: Incidents Viewer Redesign (Week 9, 12-16h)
+- [ ] Create `components/admin/FilterPanel.tsx` - Organized filter UI
+- [ ] Improve pagination UI:
+  - [ ] Add "Page X of Y" indicator
+  - [ ] Add jump to page input
+  - [ ] Add items per page selector
+  - [ ] Add keyboard navigation
+- [ ] Add bulk selection and actions:
+  - [ ] Select all checkbox
+  - [ ] Export CSV functionality
+  - [ ] Archive action
+  - [ ] Delete action
+
+### Timeline Summary
+| Phase | Duration | Effort | Status |
+|-------|----------|--------|--------|
+| Quick Wins | Ongoing | 8h | ✅ Complete |
+| Phase 1: Foundation | Week 1-2 | 16-20h | 🔵 In Progress |
+| Phase 2: Navigation | Week 3 | 12-16h | ⚪ Pending |
+| Phase 3: Logger Refactor | Week 4-5 | 20-24h | ⚪ Pending |
+| Phase 4: Admin Redesign | Week 6-7 | 16-20h | ⚪ Pending |
+| Phase 5: Mobile | Week 8 | 8-12h | ⚪ Pending |
+| Phase 6: Incidents | Week 9 | 12-16h | ⚪ Pending |
+| **Total** | 9 weeks | 84-108h | - |
+
+## Priority: Super Admin & Multiâ€'Tenant Auth
 
 We are preparing TrackTally for multiple schools and future individual licences. The immediate focus is enabling a Super Admin experience and multiâ€‘tenant authentication while keeping mobile signâ€‘in excellent.
 
@@ -766,6 +876,12 @@ Based on a comprehensive code review conducted January 2025, the following actio
 **Recommendation**: Don't optimize prematurely. Your current architecture is fine for 1-2 schools.
 
 ---
+
+## LMS templates & SIMON export preview (Latest)
+- **Organization.lmsProvider enum** (`TRACKTALLY` | `SIMON`) is selectable per school in `/super-admin`; shows a read-only field mapping preview.
+- **LMS export demo** at `/admin/lms-export` previews recent incidents transformed via `lib/lms-templates` (TrackTally and SIMON) and lets you download/copy JSON.
+- **Logger/UI** remains TrackTally-standard; SIMON mapping is applied on export/preview for now.
+- **Auth exception for demos**: `ALLOWED_EMAIL_EXCEPTIONS` allowlist bypasses `ALLOWED_GOOGLE_DOMAIN` for specific emails, but only if a matching Teacher row exists with an `organizationId`; role still comes from the Teacher record.
 
 ## Troubleshooting
 

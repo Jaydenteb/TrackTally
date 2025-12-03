@@ -24,6 +24,16 @@ const superAdminEmails = new Set(
     .filter(Boolean),
 );
 
+// Optional allowlist to bypass domain gating (for demo/test accounts only).
+// These accounts still take their role from the Teacher record and must have
+// an assigned organization in the DB.
+const exceptionEmails = new Set(
+  (process.env.ALLOWED_EMAIL_EXCEPTIONS ?? "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean),
+);
+
 function isAllowedDomain(email?: string | null, hostedDomain?: string | null) {
   // SECURITY: If no domain is configured, reject by default (fail-safe)
   if (!normalizedDomain) return false;
@@ -132,7 +142,12 @@ if (authConfigured) {
         const hostedDomain = typeof profile?.hd === "string" ? profile.hd.toLowerCase() : undefined;
         const domain = getEmailDomain(email);
         const isSuperAdmin = email ? superAdminEmails.has(email) : false;
-        if (!isSuperAdmin && !isAllowedDomain(email, hostedDomain)) {
+        if (!email) return false;
+
+        let organizationId: string | null = null;
+        const isException = email ? exceptionEmails.has(email) : false;
+
+        if (!isSuperAdmin && !isException && !isAllowedDomain(email, hostedDomain)) {
           console.warn(
             JSON.stringify({
               event: "signInBlocked",
@@ -144,10 +159,22 @@ if (authConfigured) {
           );
           return false;
         }
-        if (!email) return false;
 
-        let organizationId: string | null = null;
-        if (!isSuperAdmin) {
+        if (!isSuperAdmin && isException) {
+          // For exception accounts, require an existing teacher with an organization.
+          const existingTeacher = await getTeacher(email);
+          if (!existingTeacher || !existingTeacher.organizationId) {
+            console.warn(
+              JSON.stringify({
+                event: "signInBlocked",
+                reason: "exceptionMissingTeacher",
+                email,
+              }),
+            );
+            return false;
+          }
+          organizationId = existingTeacher.organizationId;
+        } else if (!isSuperAdmin) {
           if (!domain) {
             console.warn(JSON.stringify({ event: "signInBlocked", reason: "missingDomain", email }));
             return false;
@@ -281,7 +308,6 @@ if (authConfigured) {
 }
 
 export { handlers, authFn as auth, signInFn as signIn, signOutFn as signOut };
-
 
 
 

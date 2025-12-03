@@ -1,0 +1,133 @@
+/* Base button styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+
+/* Size variants */
+.sm {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.md {
+  padding: 0.65rem 1rem;
+  font-size: 0.95rem;
+}
+
+.lg {
+  padding: 0.75rem 1.2rem;
+  font-size: 1rem;
+}
+
+/* Color variants */
+.primary {
+  background: #0f766e;
+  color: white;
+  border-color: #0f766e;
+}
+
+.primary:hover:not(:disabled) {
+  background: #0d5f58;
+  border-color: #0d5f58;
+}
+
+.secondary {
+  background: #ecfeff;
+  color: #0f766e;
+  border-color: #0f766e;
+}
+
+.secondary:hover:not(:disabled) {
+  background: #cffafe;
+}
+
+.outline {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5f5;
+}
+
+.outline:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.danger {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #dc2626;
+}
+
+.danger:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.ghost {
+  background: transparent;
+  color: #475569;
+  border-color: transparent;
+}
+
+.ghost:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+/* Full width */
+.fullWidth {
+  width: 100%;
+}
+
+/* Active state (for navigation) */
+.active.primary {
+  background: #0a524c;
+  border-color: #0a524c;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.active.secondary {
+  background: #0f766e;
+  color: white;
+  border-color: #0f766e;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.active.outline {
+  background: #0f766e;
+  color: white;
+  border-color: #0f766e;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.active.ghost {
+  background: #f1f5f9;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.active.danger {
+  background: #dc2626;
+  color: white;
+  border-color: #b91c1c;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}

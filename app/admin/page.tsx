@@ -51,6 +51,8 @@ export default async function AdminPage({ searchParams }: Props) {
         domain={organizationDomain}
         impersonatedDomain={impersonatedDomain}
         isSuperAdminView={session.user?.role === "superadmin"}
+        role={session.user?.role ?? "admin"}
+        currentPath="/admin"
         initialOrganization={{
           name: impersonatedDomain ? null : organizationName,
           domain: impersonatedDomain ?? organizationDomain,

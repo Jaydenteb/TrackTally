@@ -26,11 +26,18 @@ export function LmsExportView() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [transformedData, setTransformedData] = useState<Partial<IncidentForExport> | null>(null);
+  const [impersonatedDomain, setImpersonatedDomain] = useState<string | null>(null);
 
   useEffect(() => {
+    // Capture ?domain= or ?impersonate= from the current URL (super admin impersonation support)
+    const params = new URLSearchParams(window.location.search);
+    const domainParam = params.get("domain") ?? params.get("impersonate");
+    setImpersonatedDomain(domainParam);
+
     async function loadData() {
       try {
-        const response = await fetch("/api/admin/lms-export", { cache: "no-store" });
+        const query = domainParam ? `?domain=${encodeURIComponent(domainParam)}` : "";
+        const response = await fetch(`/api/admin/lms-export${query}`, { cache: "no-store" });
         const result: ApiResponse = await response.json();
 
         if (result.ok && result.data) {
@@ -95,6 +102,7 @@ export function LmsExportView() {
   }
 
   const provider = organization.lmsProvider || "TRACKTALLY";
+  const impersonationLabel = impersonatedDomain ? ` (Impersonating ${impersonatedDomain})` : "";
 
   return (
     <div style={{ maxWidth: "1200px", width: "100%", display: "grid", gap: "1.5rem" }}>

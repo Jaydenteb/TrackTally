@@ -1,0 +1,25 @@
+.iconWrapper {
+  margin-bottom: 0.5rem;
+}
+
+.dangerIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.warningIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #fef9c3;
+  color: #ca8a04;
+}

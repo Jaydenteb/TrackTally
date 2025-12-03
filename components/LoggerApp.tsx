@@ -1,137 +1,30 @@
 "use client";
 
 import {
-  ChangeEvent,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import type {
-  MouseEvent as ReactMouseEvent,
-  TouchEvent as ReactTouchEvent,
-} from "react";
+import type { TouchEvent as ReactTouchEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import styles from "../app/page.module.css";
-import { flushQueue, getQueueCount, queueIncident } from "../lib/idb";
-import { startDictation } from "../lib/speech";
+import { queueIncident } from "../lib/idb";
 import { InstallPwaButton } from "./InstallPwaButton";
 import { usePwaInstall } from "./PwaInstallProvider";
-
-type Student = {
-  id: string;
-  studentId: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-};
-
-type ClassData = {
-  id: string;
-  name: string;
-  code: string;
-  students: Student[];
-};
-
-type IncidentPayload = {
-  type?: string;
-  studentId: string;
-  studentName: string;
-  level: string;
-  category: string;
-  location: string;
-  actionTaken?: string;
-  note?: string;
-  classCode?: string;
-  device?: string;
-  uuid: string;
-  timestamp?: string;
-};
-
-type IncidentOptionGroups = {
-  levels: string[];
-  categories: string[];
-  locations: string[];
-  actions: string[];
-  commendationLevels?: string[];
-  commendationCategories?: string[];
-};
-
-const LEVELS = ["Minor", "Major"] as const;
-const CATEGORIES = [
-  "Disruption",
-  "Non-compliance",
-  "Unsafe play",
-  "Physical contact",
-  "Defiance",
-  "Tech misuse",
-  "Bullying",
-  "Other",
-];
-const LOCATIONS = ["Classroom", "Yard", "Specialist", "Transition", "Online"];
-const ACTIONS = [
-  "Redirect",
-  "Time out",
-  "Restorative chat",
-  "Parent contact",
-  "Office referral",
-];
-
-const DEFAULT_INCIDENT_OPTIONS: IncidentOptionGroups = {
-  levels: [...LEVELS],
-  categories: [...CATEGORIES],
-  locations: [...LOCATIONS],
-  actions: [...ACTIONS],
-};
-
-const STEP_ORDER = [
-  "students",
-  "type",
-  "level",
-  "category",
-  "location",
-  "action",
-  "note",
-] as const;
-
-type StepKey = (typeof STEP_ORDER)[number];
-
-const STEP_TITLES: Record<StepKey, string> = {
-  students: "Choose students",
-  type: "Record type",
-  level: "Pick level",
-  category: "Tag category",
-  location: "Set location",
-  action: "Action taken",
-  note: "Add context",
-};
-
-const getStepDescription = (step: StepKey, recordType: string): string => {
-  switch (step) {
-    case "students":
-      return "Select who is involved. Bulk select lets you tag multiple learners.";
-    case "type":
-      return "Is this an incident or a commendation?";
-    case "level":
-      return recordType === "commendation"
-        ? "How notable is this positive behavior?"
-        : "Is this a minor or major behaviour incident?";
-    case "category":
-      return recordType === "commendation"
-        ? "What type of positive behavior is this?"
-        : "Label the behaviour so trends stay clear.";
-    case "location":
-      return "Where did this happen?";
-    case "action":
-      return "Document the response taken.";
-    case "note":
-      return "Optional context for the team (voice dictation supported).";
-    default:
-      return "";
-  }
-};
+import {
+  useIncidentForm,
+  useOfflineQueue,
+  useRoster,
+  STEP_ORDER,
+  STEP_TITLES,
+  getStepDescription,
+  type StepKey,
+  type IncidentPayload,
+} from "../hooks";
+import { StudentSelector, ChipSelector, NoteStep } from "./logger";
 
 type Props = {
   authConfigured: boolean;
@@ -145,40 +38,55 @@ export function LoggerApp({
   redirectAdmin = true,
 }: Props) {
   const router = useRouter();
-  const sessionResult = useSession();
-  const { data: session, status } = sessionResult;
-  const [classes, setClasses] = useState<ClassData[]>([]);
-  const [selectedClass, setSelectedClass] = useState<string>("");
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [isBulkMode, setIsBulkMode] = useState(false);
-  const [type, setType] = useState<string>("");
-  const [level, setLevel] = useState<string>("");
-  const [category, setCategory] = useState<string>("");
-  const [location, setLocation] = useState<string>("");
-  const [actionTaken, setActionTaken] = useState<string>("");
-  const [note, setNote] = useState<string>("");
-  const [toast, setToast] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [queueCount, setQueueCount] = useState(0);
-  const [isRecording, setIsRecording] = useState(false);
-  const [classSearch, setClassSearch] = useState("");
-  const [quickFindTerm, setQuickFindTerm] = useState("");
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [incidentOptions, setIncidentOptions] =
-    useState<IncidentOptionGroups>(DEFAULT_INCIDENT_OPTIONS);
+  const { data: session, status } = useSession();
   const { isIosSafari, isStandalone } = usePwaInstall();
-  const [showIosInstallHint, setShowIosInstallHint] = useState(false);
-  const dictationRef = useRef<{ stop: () => void } | null>(null);
-  const noteRef = useRef<HTMLTextAreaElement | null>(null);
-  const stepPanelRef = useRef<HTMLDivElement | null>(null);
-  const swipeOrigin = useRef<{ x: number; y: number } | null>(null);
-  const [rosterLoading, setRosterLoading] = useState(true);
+
+  // Use extracted hooks
+  const {
+    type, level, category, location, actionTaken, note,
+    incidentOptions, activeStepOrder,
+    setType, setLevel, setCategory, setLocation, setActionTaken, setNote,
+    resetForm,
+  } = useIncidentForm();
+
+  const {
+    queueCount, sendIncident, processQueue, refreshQueueCount,
+  } = useOfflineQueue();
+
   const role = session?.user?.role ?? "teacher";
   const userEmail = session?.user?.email ?? "";
   const organizationName = session?.user?.organizationName ?? null;
   const organizationDomain = session?.user?.organizationDomain ?? null;
-  const providerId = "google";
 
+  // Super admin org selection
+  const [selectedOrgDomain, setSelectedOrgDomain] = useState<string>("");
+  const [availableOrgs, setAvailableOrgs] = useState<Array<{ id: string; name: string; domain: string }>>([]);
+
+  const [toast, setToast] = useState<string>("");
+  const showToast = useCallback((message: string) => setToast(message), []);
+
+  const {
+    classes, selectedClass, setSelectedClass,
+    currentClass, allStudents, rosterLoading,
+  } = useRoster({
+    status,
+    role,
+    selectedOrgDomain,
+    onError: showToast,
+  });
+
+  // Local state
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [showIosInstallHint, setShowIosInstallHint] = useState(false);
+
+  const stepPanelRef = useRef<HTMLDivElement | null>(null);
+  const swipeOrigin = useRef<{ x: number; y: number } | null>(null);
+
+  // iOS install hint
   useEffect(() => {
     if (!isIosSafari || isStandalone) {
       setShowIosInstallHint(false);
@@ -191,7 +99,6 @@ export function LoggerApp({
 
   const handleDismissIosInstallHint = useCallback(() => {
     setShowIosInstallHint(false);
-    if (typeof window === "undefined") return;
     try {
       window.localStorage.setItem("tt-ios-a2hs-dismissed", "true");
     } catch {
@@ -199,48 +106,24 @@ export function LoggerApp({
     }
   }, []);
 
-  const loadRoster = useCallback(async () => {
-    if (status !== "authenticated") return;
-    setRosterLoading(true);
-    try {
-      const response = await fetch("/api/roster", { cache: "no-store" });
-      if (!response.ok) {
-        console.error("Failed to load roster", await response.text());
-        setToast("Could not load roster.");
-        return;
-      }
-      const payload = await response.json();
-      const mapped: ClassData[] = (payload.data ?? []).map((cls: any) => ({
-        id: cls.id,
-        name: cls.name,
-        code: cls.code,
-        students: (cls.students ?? []).map((student: any) => ({
-          id: student.id,
-          studentId: student.studentId,
-          firstName: student.firstName,
-          lastName: student.lastName,
-          name: `${student.firstName} ${student.lastName}`,
-        })),
-      }));
-      setClasses(mapped);
-      setSelectedClass((prev) => prev || (mapped[0]?.id ?? ""));
-    } catch (error) {
-      console.error("Roster load failed", error);
-      setToast("Could not load roster.");
-    } finally {
-      setRosterLoading(false);
-    }
-  }, [status]);
-
+  // Load organizations for super admins
   useEffect(() => {
-    if (status === "authenticated") {
-      setRosterLoading(true);
-      void loadRoster();
-    } else if (status === "unauthenticated") {
-      setRosterLoading(false);
+    if (status === "authenticated" && role === "superadmin") {
+      fetch("/api/super-admin/schools")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.ok && data.data) {
+            setAvailableOrgs(data.data);
+            if (!selectedOrgDomain && data.data.length > 0) {
+              setSelectedOrgDomain(data.data[0].domain);
+            }
+          }
+        })
+        .catch((err) => console.error("Failed to load organizations", err));
     }
-  }, [status, loadRoster]);
+  }, [status, role, selectedOrgDomain]);
 
+  // Redirect admins
   useEffect(() => {
     if (!redirectAdmin || !authConfigured || status !== "authenticated") return;
     if (role === "superadmin") {
@@ -252,129 +135,25 @@ export function LoggerApp({
     }
   }, [authConfigured, redirectAdmin, role, router, status]);
 
-  const handleSignIn = () => {
-    void signIn(providerId, { callbackUrl: "/" });
-  };
-
+  // Toast auto-dismiss
   useEffect(() => {
-    let cancelled = false;
-    async function loadOptions() {
-      try {
-        const response = await fetch("/api/options", { cache: "no-store" });
-        if (!response.ok) return;
-        const payload = await response.json();
-        const data = payload?.data as IncidentOptionGroups | undefined;
-        if (!data) return;
-        const normalized: IncidentOptionGroups = {
-          levels:
-            Array.isArray(data.levels) && data.levels.length
-              ? data.levels
-              : DEFAULT_INCIDENT_OPTIONS.levels,
-          categories:
-            Array.isArray(data.categories) && data.categories.length
-              ? data.categories
-              : DEFAULT_INCIDENT_OPTIONS.categories,
-          locations:
-            Array.isArray(data.locations) && data.locations.length
-              ? data.locations
-              : DEFAULT_INCIDENT_OPTIONS.locations,
-          actions:
-            Array.isArray(data.actions) && data.actions.length
-              ? data.actions
-              : DEFAULT_INCIDENT_OPTIONS.actions,
-          commendationLevels:
-            Array.isArray(data.commendationLevels) && data.commendationLevels.length
-              ? data.commendationLevels
-              : ["Notable", "Exceptional"],
-          commendationCategories:
-            Array.isArray(data.commendationCategories) && data.commendationCategories.length
-              ? data.commendationCategories
-              : ["Excellent work", "Helping others", "Leadership", "Improvement", "Positive attitude", "Kindness", "Responsibility", "Other"],
-        };
-        if (!cancelled) {
-          setIncidentOptions(normalized);
-          setLevel((value) => (normalized.levels.includes(value) ? value : ""));
-          setCategory((value) =>
-            normalized.categories.includes(value) ? value : "",
-          );
-          setLocation((value) =>
-            normalized.locations.includes(value) ? value : "",
-          );
-          setActionTaken((value) =>
-            normalized.actions.includes(value) ? value : "",
-          );
-        }
-      } catch {
-        // ignore failures, defaults stay in place
-      }
-    }
-    void loadOptions();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(""), 2600);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
-  const handleSignOut = () => {
-    void signOut({ callbackUrl: "/login" });
-  };
-
-  const allStudents = useMemo(
-    () =>
-      classes.flatMap((classroom) =>
-        classroom.students.map((student) => ({
-          id: student.id,
-          studentId: student.studentId,
-          name: student.name,
-          classId: classroom.id,
-          classLabel: classroom.name,
-        })),
-      ),
-    [classes],
-  );
-
-  const currentClass = useMemo(
-    () => classes.find((item) => item.id === selectedClass) ?? null,
-    [classes, selectedClass],
-  );
-
-  const quickFindOptions = useMemo(
-    () =>
-      allStudents.map((student) => ({
-        ...student,
-        label: `${student.name} (${student.classLabel})`,
-      })),
-    [allStudents],
-  );
-
-  const classFilteredStudents = useMemo(() => {
-    if (!currentClass) return [];
-    const term = classSearch.trim().toLowerCase();
-    if (!term) return currentClass.students;
-    return currentClass.students.filter((student) =>
-      student.name.toLowerCase().includes(term),
-    );
-  }, [classSearch, currentClass]);
-
-  const activeStepOrder = useMemo(() => {
-    if (type === "commendation") {
-      return ["students", "type", "category", "location", "note"] as const;
-    }
-    return STEP_ORDER;
-  }, [type]);
-
+  // Step navigation logic
   const maxUnlockedStep = useMemo(() => {
     let unlocked = 0;
     if (selectedStudents.length) unlocked = 1;
     if (unlocked >= 1 && type) unlocked = 2;
 
-    // For commendations: skip level and action steps
     if (type === "commendation") {
       if (unlocked >= 2 && category) unlocked = 3;
       if (unlocked >= 3 && location) unlocked = 4;
       return unlocked;
     }
 
-    // For incidents: require all fields
     if (unlocked >= 2 && level) unlocked = 3;
     if (unlocked >= 3 && category) unlocked = 4;
     if (unlocked >= 4 && location) unlocked = 5;
@@ -394,158 +173,17 @@ export function LoggerApp({
     }
   }, [selectedStudents.length, currentStepIndex]);
 
-  const currentStep = activeStepOrder[currentStepIndex];
-  const isFinalStep = currentStepIndex === activeStepOrder.length - 1;
-  const canProceed = currentStepIndex < maxUnlockedStep;
-  const stepCount = activeStepOrder.length;
-
-  useEffect(() => {
-    if (!classes.length) return;
-    const storedClass = localStorage.getItem("tracktally:lastClass");
-    if (storedClass && classes.some((c) => c.id === storedClass)) {
-      setSelectedClass((prev) => prev || storedClass);
-    } else {
-      setSelectedClass((prev) => prev || classes[0].id);
-    }
-  }, [classes]);
-
-  useEffect(() => {
-    if (selectedClass) {
-      localStorage.setItem("tracktally:lastClass", selectedClass);
-    }
-  }, [selectedClass]);
-
-  useEffect(() => {
-    setClassSearch("");
-  }, [selectedClass]);
-
+  // Bulk mode constraint
   useEffect(() => {
     if (!isBulkMode && selectedStudents.length > 1) {
       setSelectedStudents((prev) => prev.slice(0, 1));
     }
   }, [isBulkMode, selectedStudents]);
 
-  const sendIncident = useCallback(async (payload: IncidentPayload) => {
-    let response: Response;
-    try {
-      response = await fetch("/api/log-incident", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch (error) {
-      throw new Error(
-        error instanceof Error ? error.message : "Network error while sending incident.",
-      );
-    }
-
-    if (!response.ok) {
-      let message = "Failed to send incident";
-      try {
-        const data = await response.json();
-        if (data?.error) message = data.error;
-      } catch {
-        // ignore JSON parse failures
-      }
-      throw new Error(message);
-    }
-  }, []);
-
-  const refreshQueueCount = useCallback(async () => {
-    const count = await getQueueCount();
-    setQueueCount(count);
-  }, []);
-
-  const processQueue = useCallback(async () => {
-    if (typeof navigator === "undefined" || !navigator.onLine) return;
-    const { flushed } = await flushQueue(sendIncident);
-    if (flushed > 0) {
-      setToast(`Sent ${flushed} queued log${flushed > 1 ? "s" : ""}.`);
-      await refreshQueueCount();
-    }
-  }, [refreshQueueCount, sendIncident]);
-
-  useEffect(() => {
-    refreshQueueCount();
-    processQueue();
-
-    const handleOnline = () => {
-      processQueue();
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        processQueue();
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    document.addEventListener("visibilitychange", handleVisibility);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [processQueue, refreshQueueCount]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(""), 2600);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-
-  const handleStudentToggle = (studentId: string) => {
-    if (!currentClass) return;
-    setSelectedStudents((prev) => {
-      if (isBulkMode) {
-        return prev.includes(studentId)
-          ? prev.filter((id) => id !== studentId)
-          : [...prev, studentId];
-      }
-      return prev[0] === studentId ? [] : [studentId];
-    });
-  };
-
-  const handleTypeSelect = (option: string) => {
-    setType(option);
-    setCurrentStepIndex((prev) => {
-      const target = STEP_ORDER.indexOf("level");
-      return prev < target ? target : prev;
-    });
-  };
-
-  const handleLevelSelect = (option: string) => {
-    setLevel(option);
-    setCurrentStepIndex((prev) => {
-      const target = STEP_ORDER.indexOf("category");
-      return prev < target ? target : prev;
-    });
-  };
-
-  const handleCategorySelect = (option: string) => {
-    setCategory(option);
-    setCurrentStepIndex((prev) => {
-      const target = STEP_ORDER.indexOf("location");
-      return prev < target ? target : prev;
-    });
-  };
-
-  const handleLocationSelect = (option: string) => {
-    setLocation(option);
-    setCurrentStepIndex((prev) => {
-      const target = STEP_ORDER.indexOf("action");
-      return prev < target ? target : prev;
-    });
-  };
-
-  const handleActionSelect = (option: string) => {
-    setActionTaken(option);
-    setCurrentStepIndex((prev) => {
-      const target = STEP_ORDER.indexOf("note");
-      return prev < target ? target : prev;
-    });
-  };
+  const currentStep = activeStepOrder[currentStepIndex] as StepKey;
+  const isFinalStep = currentStepIndex === activeStepOrder.length - 1;
+  const canProceed = currentStepIndex < maxUnlockedStep;
+  const stepCount = activeStepOrder.length;
 
   const handleNext = useCallback(() => {
     setCurrentStepIndex((prev) => Math.min(prev + 1, maxUnlockedStep));
@@ -555,159 +193,138 @@ export function LoggerApp({
     setCurrentStepIndex((prev) => Math.max(prev - 1, 0));
   }, []);
 
-  const handleDictation = useCallback(() => {
-    if (isRecording) {
-      dictationRef.current?.stop();
-      dictationRef.current = null;
-      setIsRecording(false);
-      return;
-    }
+  // Swipe navigation
+  const handleTouchStartSwipe = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    swipeOrigin.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
 
-    const hasNativeDictation =
-      typeof window !== "undefined" && !!window.TrackTallyNative?.startDictation;
-    const isiOS =
-      typeof navigator !== "undefined" &&
-      /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (!hasNativeDictation && isiOS) {
-      const textarea = noteRef.current;
-      if (textarea) {
-        textarea.focus();
-        try {
-          const length = textarea.value.length;
-          textarea.setSelectionRange(length, length);
-        } catch {
-          // ignore selection errors
-        }
-      }
-      setToast("Tap the keyboard mic to dictate.");
-      return;
-    }
-
-    const controller = startDictation({
-      onResult: (text) => {
-        const cleaned = text.trim();
-        if (cleaned) {
-          setNote((prev) =>
-            prev ? `${prev.trim()} ${cleaned}`.trim() : cleaned,
-          );
-          setToast("Dictation added");
-        }
-        dictationRef.current = null;
-        setIsRecording(false);
-      },
-      onError: (error) => {
-        setToast(error);
-        dictationRef.current = null;
-        setIsRecording(false);
-      },
-    });
-
-    if (controller) {
-      dictationRef.current = controller;
-      setIsRecording(true);
-    }
-  }, [isRecording]);
-
-  const handleTouchStartSwipe = useCallback(
-    (event: ReactTouchEvent<HTMLDivElement>) => {
-      if (event.touches.length !== 1) return;
-      const touch = event.touches[0];
-      swipeOrigin.current = {
-        x: touch.clientX,
-        y: touch.clientY,
-      };
-    },
-    [],
-  );
-
-  const handleTouchEndSwipe = useCallback(
-    (event: ReactTouchEvent<HTMLDivElement>) => {
-      if (!swipeOrigin.current || event.changedTouches.length !== 1) {
-        swipeOrigin.current = null;
-        return;
-      }
-      const { x, y } = swipeOrigin.current;
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - x;
-      const dy = touch.clientY - y;
+  const handleTouchEndSwipe = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (!swipeOrigin.current || event.changedTouches.length !== 1) {
       swipeOrigin.current = null;
+      return;
+    }
+    const { x, y } = swipeOrigin.current;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - x;
+    const dy = touch.clientY - y;
+    swipeOrigin.current = null;
 
-      if (Math.abs(dx) < 60 || Math.abs(dy) > 40) {
-        return;
-      }
+    if (Math.abs(dx) < 60 || Math.abs(dy) > 40) return;
 
-      if (dx < 0 && currentStepIndex < maxUnlockedStep) {
-        handleNext();
-      } else if (dx > 0 && currentStepIndex > 0) {
-        handleBack();
-      }
-    },
-    [currentStepIndex, handleBack, handleNext, maxUnlockedStep],
-  );
+    if (dx < 0 && currentStepIndex < maxUnlockedStep) {
+      handleNext();
+    } else if (dx > 0 && currentStepIndex > 0) {
+      handleBack();
+    }
+  }, [currentStepIndex, handleBack, handleNext, maxUnlockedStep]);
 
   const handleTouchCancelSwipe = useCallback(() => {
     swipeOrigin.current = null;
   }, []);
 
-  const handleQuickFindChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setQuickFindTerm(value);
-    const match = quickFindOptions.find(
-      (option) => option.label.toLowerCase() === value.toLowerCase(),
-    );
-    if (!match) return;
+  // Student selection handlers
+  const handleStudentToggle = useCallback((studentId: string) => {
+    if (!currentClass) return;
+    setSelectedStudents((prev) => {
+      if (isBulkMode) {
+        return prev.includes(studentId)
+          ? prev.filter((id) => id !== studentId)
+          : [...prev, studentId];
+      }
+      return prev[0] === studentId ? [] : [studentId];
+    });
+  }, [currentClass, isBulkMode]);
 
-    if (match.classId !== selectedClass) {
-      setSelectedClass(match.classId);
+  const handleStudentSelected = useCallback((studentId: string, classId: string) => {
+    if (classId !== selectedClass) {
+      setSelectedClass(classId);
     }
+    setSelectedStudents([studentId]);
+  }, [selectedClass, setSelectedClass]);
 
-    setSelectedStudents([match.id]);
-    setClassSearch("");
-  };
+  // Step selection handlers with auto-advance
+  const handleTypeSelect = useCallback((option: string) => {
+    setType(option);
+    setCurrentStepIndex((prev) => {
+      const target = STEP_ORDER.indexOf("level");
+      return prev < target ? target : prev;
+    });
+  }, [setType]);
 
+  const handleLevelSelect = useCallback((option: string) => {
+    setLevel(option);
+    setCurrentStepIndex((prev) => {
+      const target = STEP_ORDER.indexOf("category");
+      return prev < target ? target : prev;
+    });
+  }, [setLevel]);
+
+  const handleCategorySelect = useCallback((option: string) => {
+    setCategory(option);
+    setCurrentStepIndex((prev) => {
+      const target = STEP_ORDER.indexOf("location");
+      return prev < target ? target : prev;
+    });
+  }, [setCategory]);
+
+  const handleLocationSelect = useCallback((option: string) => {
+    setLocation(option);
+    setCurrentStepIndex((prev) => {
+      const target = STEP_ORDER.indexOf("action");
+      return prev < target ? target : prev;
+    });
+  }, [setLocation]);
+
+  const handleActionSelect = useCallback((option: string) => {
+    setActionTaken(option);
+    setCurrentStepIndex((prev) => {
+      const target = STEP_ORDER.indexOf("note");
+      return prev < target ? target : prev;
+    });
+  }, [setActionTaken]);
+
+  // Submit handler
   const handleSubmit = useCallback(async () => {
     if (!selectedStudents.length) {
-      setToast("Pick at least one student.");
-      setCurrentStepIndex(activeStepOrder.indexOf("students"));
+      showToast("Pick at least one student.");
+      setCurrentStepIndex(activeStepOrder.indexOf("students" as any));
       return;
     }
     if (!type) {
-      setToast("Choose incident or commendation.");
-      setCurrentStepIndex(activeStepOrder.indexOf("type"));
+      showToast("Choose incident or commendation.");
+      setCurrentStepIndex(activeStepOrder.indexOf("type" as any));
       return;
     }
-
-    // Only validate level and action for incidents
     if (type === "incident") {
       if (!level) {
-        setToast("Select a level.");
+        showToast("Select a level.");
         setCurrentStepIndex(STEP_ORDER.indexOf("level"));
         return;
       }
       if (!actionTaken) {
-        setToast("Select an action.");
+        showToast("Select an action.");
         setCurrentStepIndex(STEP_ORDER.indexOf("action"));
         return;
       }
     }
-
     if (!category) {
-      setToast("Choose a category.");
-      setCurrentStepIndex(activeStepOrder.indexOf("category"));
+      showToast("Choose a category.");
+      setCurrentStepIndex(activeStepOrder.indexOf("category" as any));
       return;
     }
     if (!location) {
-      setToast("Choose a location.");
-      setCurrentStepIndex(activeStepOrder.indexOf("location"));
+      showToast("Choose a location.");
+      setCurrentStepIndex(activeStepOrder.indexOf("location" as any));
       return;
     }
-    setIsSubmitting(true);
 
-    const deviceInfo =
-      typeof navigator !== "undefined" ? navigator.userAgent : undefined;
+    setIsSubmitting(true);
+    const deviceInfo = typeof navigator !== "undefined" ? navigator.userAgent : undefined;
 
     if (!currentClass) {
-      setToast("Select a class to log incidents.");
+      showToast("Select a class to log incidents.");
       setIsSubmitting(false);
       return;
     }
@@ -747,8 +364,7 @@ export function LoggerApp({
         await sendIncident(incident);
         sent += 1;
       } catch (error) {
-        lastError =
-          error instanceof Error ? error.message : "Failed to send incident";
+        lastError = error instanceof Error ? error.message : "Failed to send incident";
         await queueIncident(incident);
         queued += 1;
       }
@@ -756,53 +372,31 @@ export function LoggerApp({
 
     await refreshQueueCount();
     setIsSubmitting(false);
-    setNote("");
 
     if (sent && !queued) {
-      setToast("Logged");
+      showToast("Logged");
     } else if (sent && queued) {
       const queuedMsg = `Queued ${queued} log${queued === 1 ? "" : "s"} offline.`;
-      setToast(lastError ? `${lastError} ${queuedMsg}` : `Logged ${sent}, ${queuedMsg}`);
+      showToast(lastError ? `${lastError} ${queuedMsg}` : `Logged ${sent}, ${queuedMsg}`);
     } else if (queued) {
       const queuedMsg = `Queued ${queued} log${queued === 1 ? "" : "s"} offline.`;
-      setToast(lastError ? `${lastError} ${queuedMsg}` : queuedMsg);
+      showToast(lastError ? `${lastError} ${queuedMsg}` : queuedMsg);
     }
 
     processQueue();
 
+    // Reset form
     setCurrentStepIndex(0);
     setSelectedStudents([]);
     setIsBulkMode(false);
-    setType("");
-    setLevel("");
-    setCategory("");
-    setLocation("");
-    setActionTaken("");
-    setQuickFindTerm("");
-    setClassSearch("");
+    resetForm();
   }, [
-    actionTaken,
-    activeStepOrder,
-    category,
-    currentClass,
-    level,
-    location,
-    note,
-    processQueue,
-    refreshQueueCount,
-    type,
-    selectedStudents,
-    sendIncident,
+    selectedStudents, type, level, category, location, actionTaken, note,
+    currentClass, activeStepOrder, sendIncident, processQueue, refreshQueueCount,
+    resetForm, showToast,
   ]);
 
-  useEffect(() => {
-    if (!stepPanelRef.current) return;
-    const focusable = stepPanelRef.current.querySelector<HTMLElement>(
-      "button, input, textarea, select",
-    );
-    focusable?.focus();
-  }, [currentStep]);
-
+  // Enter key submit
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Enter" || event.shiftKey) return;
@@ -820,260 +414,101 @@ export function LoggerApp({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleSubmit, isFinalStep, isSubmitting]);
 
+  // Focus management
+  useEffect(() => {
+    if (!stepPanelRef.current) return;
+    const focusable = stepPanelRef.current.querySelector<HTMLElement>(
+      "button, input, textarea, select",
+    );
+    focusable?.focus();
+  }, [currentStep]);
+
+  const handleSignIn = () => void signIn("google", { callbackUrl: "/" });
+  const handleSignOut = () => void signOut({ callbackUrl: "/login" });
+
+  // Render step content
   const renderStepContent = (): JSX.Element => {
     switch (currentStep) {
       case "students":
         return (
-          <>
-            <section>
-              <p className={styles.sectionTitle}>Quick find</p>
-              <div className={styles.searchGroup}>
-                <input
-                  type="text"
-                  className={styles.searchField}
-                  list="tracktally-quick-find"
-                  placeholder="Type a name to jump to a student"
-                  value={quickFindTerm}
-                  onChange={handleQuickFindChange}
-                  autoComplete="off"
-                />
-                <datalist id="tracktally-quick-find">
-                  {quickFindOptions.map((option) => (
-                    <option key={`${option.classId}-${option.id}`} value={option.label} />
-                  ))}
-                </datalist>
-              </div>
-            </section>
-
-            <section>
-              <p className={styles.sectionTitle}>Class roster</p>
-              <select
-                className={styles.select}
-                value={selectedClass}
-                onChange={(event) => {
-                  setSelectedClass(event.target.value);
-                  setSelectedStudents([]);
-                  setCurrentStepIndex(0);
-                }}
-              >
-                {classes.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </section>
-
-            <section>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "0.4rem",
-                }}
-              >
-                <p className={styles.sectionTitle} style={{ marginBottom: 0 }}>
-                  Students
-                </p>
-                {selectedStudents.length > 0 && (
-                  <span className={styles.selectionCount}>
-                    {selectedStudents.length} selected
-                  </span>
-                )}
-              </div>
-              <div className={styles.toggle}>
-                <button
-                  type="button"
-                  className={`${styles.toggleButton} ${
-                    isBulkMode ? styles.toggleActive : ""
-                  }`}
-                  onClick={() => setIsBulkMode((prev) => !prev)}
-                  aria-pressed={isBulkMode}
-                  aria-label="Toggle bulk select"
-                />
-                Bulk select
-              </div>
-              <input
-                type="text"
-                className={styles.searchField}
-                placeholder="Filter this class"
-                value={classSearch}
-                onChange={(event) => setClassSearch(event.target.value)}
-                aria-label="Filter students in this class"
-              />
-              <div className={styles.studentScroll}>
-                {classFilteredStudents.length === 0 ? (
-                  <p className={styles.emptyState}>No students match that search.</p>
-                ) : (
-                  <div className={styles.studentGrid}>
-                    {classFilteredStudents.map((student) => {
-                      const isActive = selectedStudents.includes(student.id);
-                      return (
-                        <button
-                          key={student.id}
-                          type="button"
-                          className={`${styles.chip} ${
-                            isActive ? styles.chipSelected : ""
-                          }`}
-                          onClick={() => handleStudentToggle(student.id)}
-                        >
-                          {student.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          </>
+          <StudentSelector
+            classes={classes}
+            selectedClass={selectedClass}
+            currentClass={currentClass}
+            selectedStudents={selectedStudents}
+            allStudents={allStudents}
+            isBulkMode={isBulkMode}
+            onSelectClass={(id) => {
+              setSelectedClass(id);
+              setSelectedStudents([]);
+              setCurrentStepIndex(0);
+            }}
+            onToggleStudent={handleStudentToggle}
+            onToggleBulkMode={() => setIsBulkMode((prev) => !prev)}
+            onStudentSelected={handleStudentSelected}
+          />
         );
       case "type":
         return (
-          <section>
-            <p className={styles.sectionTitle}>Record type</p>
-            <div className={styles.chipGroup}>
-              <button
-                type="button"
-                className={`${styles.chip} ${
-                  type === "incident" ? styles.chipSelected : ""
-                }`}
-                onClick={() => handleTypeSelect("incident")}
-              >
-                Incident
-              </button>
-              <button
-                type="button"
-                className={`${styles.chip} ${
-                  type === "commendation" ? styles.chipSelected : ""
-                }`}
-                onClick={() => handleTypeSelect("commendation")}
-              >
-                Commendation
-              </button>
-            </div>
-          </section>
+          <ChipSelector
+            title="Record type"
+            options={["Incident", "Commendation"]}
+            selected={type === "incident" ? "Incident" : type === "commendation" ? "Commendation" : ""}
+            onSelect={(option) => handleTypeSelect(option.toLowerCase())}
+          />
         );
       case "level":
         return (
-          <section>
-            <p className={styles.sectionTitle}>
-              {type === "commendation" ? "Impact" : "Level"}
-            </p>
-            <div className={styles.chipGroup}>
-              {(type === "commendation"
-                ? incidentOptions.commendationLevels || []
-                : incidentOptions.levels
-              ).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`${styles.chip} ${
-                    level === option ? styles.chipSelected : ""
-                  }`}
-                  onClick={() => handleLevelSelect(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </section>
+          <ChipSelector
+            title={type === "commendation" ? "Impact" : "Level"}
+            options={type === "commendation" ? incidentOptions.commendationLevels || [] : incidentOptions.levels}
+            selected={level}
+            onSelect={handleLevelSelect}
+          />
         );
       case "category":
         return (
-          <section>
-            <p className={styles.sectionTitle}>
-              {type === "commendation" ? "Recognition type" : "Category"}
-            </p>
-            <div className={styles.chipGroup}>
-              {(type === "commendation"
-                ? incidentOptions.commendationCategories || []
-                : incidentOptions.categories
-              ).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`${styles.chip} ${
-                    category === option ? styles.chipSelected : ""
-                  }`}
-                  onClick={() => handleCategorySelect(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </section>
+          <ChipSelector
+            title={type === "commendation" ? "Recognition type" : "Category"}
+            options={type === "commendation" ? incidentOptions.commendationCategories || [] : incidentOptions.categories}
+            selected={category}
+            onSelect={handleCategorySelect}
+          />
         );
       case "location":
         return (
-          <section>
-            <p className={styles.sectionTitle}>Location</p>
-            <div className={styles.chipGroup}>
-              {incidentOptions.locations.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`${styles.chip} ${
-                    location === option ? styles.chipSelected : ""
-                  }`}
-                  onClick={() => handleLocationSelect(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </section>
+          <ChipSelector
+            title="Location"
+            options={incidentOptions.locations}
+            selected={location}
+            onSelect={handleLocationSelect}
+          />
         );
       case "action":
         return (
-          <section>
-            <p className={styles.sectionTitle}>Action taken</p>
-            <div className={styles.chipGroup}>
-              {incidentOptions.actions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`${styles.chip} ${
-                    actionTaken === option ? styles.chipSelected : ""
-                  }`}
-                  onClick={() => handleActionSelect(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </section>
+          <ChipSelector
+            title="Action taken"
+            options={incidentOptions.actions}
+            selected={actionTaken}
+            onSelect={handleActionSelect}
+          />
         );
       case "note":
         return (
-          <section>
-            <p className={styles.sectionTitle}>Note</p>
-            <div className={styles.noteRow}>
-              <textarea
-                ref={noteRef}
-                className={styles.textarea}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                placeholder="Optional details"
-                autoCapitalize="sentences"
-                autoCorrect="on"
-              />
-              <button
-                type="button"
-                className={styles.micButton}
-                onClick={handleDictation}
-                aria-pressed={isRecording}
-              >
-                {isRecording ? "Stop" : "Mic"}
-              </button>
-            </div>
-          </section>
+          <NoteStep
+            note={note}
+            isRecording={isRecording}
+            onNoteChange={setNote}
+            onRecordingChange={setIsRecording}
+            onToast={showToast}
+          />
         );
       default:
         return <></>;
     }
   };
 
+  // Auth states
   if (!authConfigured) {
     return (
       <main className={styles.authWrapper}>
@@ -1083,14 +518,7 @@ export function LoggerApp({
             Authentication is not configured. Add the following environment variables to
             `.env.local` and restart the dev server:
           </p>
-          <ul
-            style={{
-              margin: 0,
-              paddingLeft: "1.2rem",
-              textAlign: "left",
-              color: "#0f172a",
-            }}
-          >
+          <ul style={{ margin: 0, paddingLeft: "1.2rem", textAlign: "left", color: "#0f172a" }}>
             {missingEnv.map((key) => (
               <li key={key}>{key}</li>
             ))}
@@ -1154,25 +582,16 @@ export function LoggerApp({
       <div className={styles.card}>
         <div className={styles.userBar}>
           <span>
-            {role === "superadmin"
-              ? "Super Admin"
-              : role === "admin"
-                ? "Admin"
-                : "Teacher"}{" "}
-            - {userEmail || "Unknown user"}
+            {role === "superadmin" ? "Super Admin" : role === "admin" ? "Admin" : "Teacher"} - {userEmail || "Unknown user"}
           </span>
-          <div
-            style={{
-              display: "flex",
-              gap: "0.6rem",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "flex-end",
-            }}
-          >
+          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
             <InstallPwaButton />
             {(role === "admin" || role === "superadmin") && (
-              <a href="/admin" className={styles.userAction} style={{ textDecoration: "none" }}>
+              <a
+                href={role === "superadmin" && selectedOrgDomain ? `/admin?impersonate=${encodeURIComponent(selectedOrgDomain)}` : "/admin"}
+                className={styles.userAction}
+                style={{ textDecoration: "none" }}
+              >
                 Admin Dashboard
               </a>
             )}
@@ -1186,27 +605,43 @@ export function LoggerApp({
             </button>
           </div>
         </div>
+
         <header className={styles.header}>
           <h1 className={styles.heading}>TrackTally</h1>
         </header>
 
         <div className={styles.orgIndicator}>
-          <div>
-            School:{" "}
-            <strong>{organizationName ?? "Unknown school"}</strong>
-          </div>
-          {organizationDomain && <span>{organizationDomain}</span>}
+          {role === "superadmin" && availableOrgs.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>Viewing School:</span>
+                <select
+                  value={selectedOrgDomain}
+                  onChange={(e) => setSelectedOrgDomain(e.target.value)}
+                  style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5", fontSize: "0.95rem", fontWeight: 600, background: "white" }}
+                >
+                  {availableOrgs.map((org) => (
+                    <option key={org.id} value={org.domain}>
+                      {org.name} ({org.domain})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : (
+            <>
+              <div>School: <strong>{organizationName ?? "Unknown school"}</strong></div>
+              {organizationDomain && <span>{organizationDomain}</span>}
+            </>
+          )}
         </div>
 
         {showIosInstallHint && (
           <div className={styles.iosPrompt}>
             <span>
-              Install TrackTally on your iPhone: tap the Share icon in Safari and choose{" "}
-              <strong>Add to Home Screen</strong>.
+              Install TrackTally on your iPhone: tap the Share icon in Safari and choose <strong>Add to Home Screen</strong>.
             </span>
-            <button type="button" onClick={handleDismissIosInstallHint}>
-              Got it
-            </button>
+            <button type="button" onClick={handleDismissIosInstallHint}>Got it</button>
           </div>
         )}
 
@@ -1217,29 +652,18 @@ export function LoggerApp({
         )}
 
         <div className={styles.stepIndicator}>
-          <div className={styles.stepCount}>
-            Step {currentStepIndex + 1} of {stepCount}
-          </div>
+          <div className={styles.stepCount}>Step {currentStepIndex + 1} of {stepCount}</div>
           <div className={styles.stepTitle}>{STEP_TITLES[currentStep]}</div>
           <p className={styles.stepDescription}>{getStepDescription(currentStep, type)}</p>
         </div>
 
-        <div
-          key={currentStep}
-          className={styles.stepPanel}
-          ref={stepPanelRef}
-        >
+        <div key={currentStep} className={styles.stepPanel} ref={stepPanelRef}>
           {renderStepContent()}
         </div>
 
         <div className={styles.stepNav}>
           {currentStepIndex > 0 && (
-            <button
-              type="button"
-              className={styles.stepButton}
-              onClick={handleBack}
-              disabled={isSubmitting}
-            >
+            <button type="button" className={styles.stepButton} onClick={handleBack} disabled={isSubmitting}>
               Back
             </button>
           )}
@@ -1256,12 +680,7 @@ export function LoggerApp({
         </div>
 
         {isFinalStep && (
-          <button
-            type="button"
-            className={styles.submitButton}
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
+          <button type="button" className={styles.submitButton} onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? "Sending..." : "Log Incident"}
           </button>
         )}

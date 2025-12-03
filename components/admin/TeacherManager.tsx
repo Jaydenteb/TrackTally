@@ -1,7 +1,10 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { ClassRecord, TeacherRecord } from "./types";
+import styles from "./TeacherManager.module.css";
 
 type Props = {
   classes: ClassRecord[];
@@ -23,6 +26,10 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
   const [role, setRole] = useState<"teacher" | "admin">("teacher");
   const [isSpecialist, setIsSpecialist] = useState(false);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    teacher: TeacherRecord | null;
+  }>({ open: false, teacher: null });
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -41,62 +48,43 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
   }
 
   return (
-    <section
-      style={{
-        background: "white",
-        borderRadius: "20px",
-        boxShadow: "0 25px 55px -40px rgba(15,23,42,0.35)",
-        padding: "1.75rem",
-        display: "grid",
-        gap: "1.25rem",
-      }}
-    >
-      <h2 style={{ margin: 0, fontSize: "1.4rem", color: "#0f172a" }}>Teachers & Staff</h2>
+    <section className={styles.section}>
+      <h2 className={styles.title}>Teachers & Staff</h2>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: "grid",
-          gap: "0.75rem",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          background: "#f8fafc",
-          padding: "1rem",
-          borderRadius: "16px",
-        }}
-      >
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <span style={{ fontWeight: 600, color: "#0f172a" }}>Email</span>
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <label className={styles.formField}>
+          <span className={styles.label}>Email</span>
           <input
             required
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+            className={styles.input}
           />
         </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <span style={{ fontWeight: 600, color: "#0f172a" }}>Display name</span>
+        <label className={styles.formField}>
+          <span className={styles.label}>Display name</span>
           <input
             value={displayName}
             onChange={(event) => setDisplayName(event.target.value)}
-            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+            className={styles.input}
           />
         </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <span style={{ fontWeight: 600, color: "#0f172a" }}>Role</span>
+        <label className={styles.formField}>
+          <span className={styles.label}>Role</span>
           <select
             value={role}
             onChange={(event) =>
               setRole(event.target.value === "admin" ? "admin" : "teacher")
             }
-            style={{ padding: "0.65rem", borderRadius: "12px", border: "1px solid #cbd5f5" }}
+            className={styles.select}
           >
             <option value="teacher">Teacher</option>
             <option value="admin">Admin</option>
           </select>
         </label>
-        <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          <span style={{ fontWeight: 600, color: "#0f172a" }}>Specialist classes</span>
+        <label className={styles.formField}>
+          <span className={styles.label}>Specialist classes</span>
           <select
             multiple
             value={selectedClasses}
@@ -105,12 +93,7 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
                 Array.from(event.target.selectedOptions).map((option) => option.value),
               )
             }
-            style={{
-              padding: "0.65rem",
-              borderRadius: "12px",
-              border: "1px solid #cbd5f5",
-              minHeight: "120px",
-            }}
+            className={styles.selectMultiple}
           >
             {classes
               .filter((cls) => !cls.archived)
@@ -120,7 +103,7 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
                 </option>
               ))}
           </select>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+          <label className={styles.checkboxLabel}>
             <input
               type="checkbox"
               checked={isSpecialist}
@@ -129,64 +112,49 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
             Mark as specialist
           </label>
         </label>
-        <div style={{ display: "flex", alignItems: "flex-end" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "0.75rem 1.2rem",
-              borderRadius: "12px",
-              border: "none",
-              background: "#0f766e",
-              color: "white",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
+        <div className={styles.submitWrapper}>
+          <button type="submit" className={styles.submitButton}>
             Add teacher
           </button>
         </div>
       </form>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <div className={styles.tableWrapper}>
+        <table className={styles.table}>
           <thead>
-            <tr style={{ textAlign: "left", color: "#475569" }}>
-              <th style={{ padding: "0.75rem 0.5rem" }}>Name</th>
-              <th style={{ padding: "0.75rem 0.5rem" }}>Email</th>
-              <th style={{ padding: "0.75rem 0.5rem" }}>Role</th>
-              <th style={{ padding: "0.75rem 0.5rem" }}>Specialist classes</th>
-              <th style={{ padding: "0.75rem 0.5rem" }}>Active</th>
-              <th style={{ padding: "0.75rem 0.5rem", textAlign: "right" }}>Actions</th>
+            <tr className={styles.tableHeader}>
+              <th className={styles.th}>Name</th>
+              <th className={styles.th}>Email</th>
+              <th className={styles.th}>Role</th>
+              <th className={styles.th}>Specialist classes</th>
+              <th className={styles.th}>Active</th>
+              <th className={styles.thRight}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {teachers.map((teacher) => (
-              <tr key={teacher.id} style={{ borderTop: "1px solid #e2e8f0" }}>
-                <td style={{ padding: "0.75rem 0.5rem", fontWeight: 600, color: "#0f172a" }}>
+              <tr key={teacher.id} className={styles.tr}>
+                <td className={styles.tdName}>
                   {teacher.displayName ?? "—"}
                 </td>
-                <td style={{ padding: "0.75rem 0.5rem", color: "#475569" }}>
+                <td className={styles.tdEmail}>
                   {teacher.email}
                 </td>
-                <td style={{ padding: "0.75rem 0.5rem" }}>
+                <td className={styles.td}>
                   <select
                     value={teacher.role === "admin" ? "admin" : "teacher"}
                     onChange={(event) =>
                       onUpdate(teacher.id, { role: event.target.value as "admin" | "teacher" })
                     }
-                    style={{
-                      padding: "0.45rem 0.6rem",
-                      borderRadius: "10px",
-                      border: "1px solid #cbd5f5",
-                    }}
+                    className={styles.cellSelect}
                   >
                     <option value="teacher">Teacher</option>
                     <option value="admin">Admin</option>
                   </select>
                 </td>
-                <td style={{ padding: "0.75rem 0.5rem" }}>
-                  <div style={{ display: "grid", gap: "0.35rem" }}>
-                    <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                <td className={styles.td}>
+                  <div className={styles.specialistCell}>
+                    <label className={styles.checkboxLabel}>
                       <input
                         type="checkbox"
                         checked={teacher.isSpecialist}
@@ -206,12 +174,7 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
                           ),
                         })
                       }
-                      style={{
-                        padding: "0.45rem",
-                        borderRadius: "10px",
-                        border: "1px solid #cbd5f5",
-                        minWidth: "180px",
-                      }}
+                      className={styles.cellSelectMultiple}
                     >
                       {classes
                         .filter((cls) => !cls.archived)
@@ -223,8 +186,8 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
                     </select>
                   </div>
                 </td>
-                <td style={{ padding: "0.75rem 0.5rem" }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                <td className={styles.td}>
+                  <label className={styles.checkboxLabel}>
                     <input
                       type="checkbox"
                       checked={teacher.active}
@@ -235,36 +198,35 @@ export function TeacherManager({ classes, teachers, onCreate, onUpdate, onDelete
                     Active
                   </label>
                 </td>
-                <td style={{ padding: "0.75rem 0.5rem", textAlign: "right" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (
-                        window.confirm(
-                          `Remove ${teacher.displayName ?? teacher.email} from TrackTally? They will lose access.`,
-                        )
-                      ) {
-                        onDelete(teacher.id);
-                      }
-                    }}
-                    style={{
-                      padding: "0.45rem 0.75rem",
-                      borderRadius: "10px",
-                      border: "1px solid #dc2626",
-                      background: "#fef2f2",
-                      color: "#b91c1c",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
+                <td className={styles.tdRight}>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setDeleteConfirm({ open: true, teacher })}
                   >
                     Remove
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, teacher: null })}
+        onConfirm={() => {
+          if (deleteConfirm.teacher) {
+            onDelete(deleteConfirm.teacher.id);
+          }
+          setDeleteConfirm({ open: false, teacher: null });
+        }}
+        title={`Remove ${deleteConfirm.teacher?.displayName ?? deleteConfirm.teacher?.email ?? "teacher"}?`}
+        description="They will lose access to TrackTally. This action cannot be undone."
+        confirmText="Remove"
+        variant="danger"
+      />
     </section>
   );
 }

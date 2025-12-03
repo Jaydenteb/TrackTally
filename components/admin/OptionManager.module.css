@@ -1,0 +1,87 @@
+.section {
+  background: var(--surface-base);
+  border-radius: 20px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 25px 55px -40px rgba(15, 23, 42, 0.35);
+}
+
+.header {
+  margin-bottom: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+
+.description {
+  margin: 0.5rem 0 0;
+  color: var(--text-muted);
+}
+
+/* Options grid */
+.optionsGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.optionGroup {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  padding: 0.85rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  background: var(--interactive-base);
+  color: var(--text-main);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--tt-primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.help {
+  color: var(--text-subtle);
+  font-size: 0.85rem;
+}
+
+/* Footer */
+.footer {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saveButton {
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  border: none;
+  background: var(--tt-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.saveButton:hover {
+  background: var(--tt-primary-hover);
+}
+
+.saveButton:disabled {
+  background: var(--border-focus);
+  cursor: not-allowed;
+}

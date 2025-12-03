@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import styles from "./OptionManager.module.css";
 
 export type IncidentOptionGroups = {
   levels: string[];
@@ -71,62 +72,39 @@ export function OptionManager({ options, saving, onSave }: Props) {
   };
 
   return (
-    <section
-      style={{
-        background: "white",
-        borderRadius: "20px",
-        padding: "1.25rem 1.5rem",
-        boxShadow: "0 25px 55px -40px rgba(15,23,42,0.35)",
-      }}
-    >
-      <header style={{ marginBottom: "1rem" }}>
-        <h2 style={{ margin: 0, fontSize: "1.4rem", color: "#0f172a" }}>
+    <section className={styles.section}>
+      <header className={styles.header}>
+        <h2 className={styles.title}>
           Incident options
         </h2>
-        <p style={{ margin: "0.5rem 0 0", color: "#475569" }}>
+        <p className={styles.description}>
           Update the chips teachers see in the logger. Enter one option per line.
         </p>
       </header>
 
-      <div style={{ display: "grid", gap: "1rem" }}>
+      <div className={styles.optionsGrid}>
         {groupMeta.map((group) => (
-          <div key={group.key} style={{ display: "grid", gap: "0.4rem" }}>
-            <label style={{ fontWeight: 600, color: "#0f172a" }}>
+          <div key={group.key} className={styles.optionGroup}>
+            <label className={styles.label}>
               {group.label}
             </label>
             <textarea
               value={toTextareaValue(draft[group.key] ?? [])}
               onChange={(event) => handleChange(group.key, event.target.value)}
               rows={4}
-              style={{
-                width: "100%",
-                borderRadius: "12px",
-                border: "1px solid #cbd5f5",
-                padding: "0.85rem",
-                fontFamily: "inherit",
-                fontSize: "0.95rem",
-                resize: "vertical",
-              }}
+              className={styles.textarea}
             />
-            <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{group.help}</span>
+            <span className={styles.help}>{group.help}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop: "1.25rem", display: "flex", justifyContent: "flex-end" }}>
+      <div className={styles.footer}>
         <button
           type="button"
           onClick={handleSubmit}
           disabled={saving || !options}
-          style={{
-            padding: "0.75rem 1.25rem",
-            borderRadius: "12px",
-            border: "none",
-            background: saving || !options ? "#cbd5f5" : "#0f766e",
-            color: "white",
-            fontWeight: 600,
-            cursor: saving || !options ? "not-allowed" : "pointer",
-          }}
+          className={styles.saveButton}
         >
           {saving ? "Saving..." : "Save options"}
         </button>

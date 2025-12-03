@@ -1,0 +1,245 @@
+.section {
+  background: var(--surface-base);
+  border-radius: 20px;
+  box-shadow: 0 25px 55px -40px rgba(15, 23, 42, 0.35);
+  padding: 1.75rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+
+/* Form */
+.form {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  background: var(--surface-muted);
+  padding: 1rem;
+  border-radius: 16px;
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.input {
+  padding: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  font-size: inherit;
+  color: var(--text-main);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:hover:not(:focus) {
+  border-color: var(--tt-primary-hover);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--tt-primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.select {
+  padding: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  font-size: inherit;
+  color: var(--text-main);
+}
+
+.selectMultiple {
+  padding: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  font-size: inherit;
+  color: var(--text-main);
+  min-height: 120px;
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.submitWrapper {
+  display: flex;
+  align-items: flex-end;
+}
+
+.submitButton {
+  padding: 0.75rem 1.2rem;
+  border-radius: 12px;
+  border: none;
+  background: var(--tt-primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.submitButton:hover {
+  background: var(--tt-primary-hover);
+}
+
+/* Table */
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableHeader {
+  text-align: left;
+  color: var(--text-muted);
+}
+
+.th {
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+}
+
+.thRight {
+  padding: 0.75rem 0.5rem;
+  text-align: right;
+  font-weight: 600;
+}
+
+.tr {
+  border-top: 1px solid var(--border-base);
+  transition: background var(--transition-fast);
+}
+
+.tr:hover {
+  background: var(--surface-muted);
+}
+
+.td {
+  padding: 0.75rem 0.5rem;
+}
+
+.tdName {
+  padding: 0.75rem 0.5rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.tdEmail {
+  padding: 0.75rem 0.5rem;
+  color: var(--text-muted);
+}
+
+.tdRight {
+  padding: 0.75rem 0.5rem;
+  text-align: right;
+}
+
+/* Cell inputs */
+.cellSelect {
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+}
+
+.cellSelectMultiple {
+  padding: 0.45rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-focus);
+  background: var(--interactive-base);
+  min-width: 180px;
+}
+
+.specialistCell {
+  display: grid;
+  gap: 0.35rem;
+}
+
+/* Responsive: Stack table as cards on mobile */
+@media (max-width: 768px) {
+  .section {
+    padding: 1rem;
+  }
+
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .tableWrapper {
+    overflow-x: visible;
+  }
+
+  .table,
+  .tableHeader,
+  .tr,
+  .th,
+  .thRight,
+  .td,
+  .tdName,
+  .tdEmail,
+  .tdRight {
+    display: block;
+  }
+
+  .tableHeader {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+
+  .tr {
+    background: var(--surface-base);
+    border: 1px solid var(--border-base);
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .tr:hover {
+    border-color: var(--border-focus);
+  }
+
+  .td,
+  .tdName,
+  .tdEmail,
+  .tdRight {
+    padding: 0.25rem 0;
+    text-align: left;
+  }
+
+  .tdRight {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .cellSelectMultiple {
+    min-width: 100%;
+  }
+}

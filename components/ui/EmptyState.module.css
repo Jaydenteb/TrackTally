@@ -1,0 +1,37 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--surface-muted) 0%, var(--surface-subtle) 100%);
+  color: var(--text-disabled);
+  margin-bottom: 1.25rem;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.description {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+  max-width: 320px;
+}
+
+.action {
+  margin-top: 1.5rem;
+}

@@ -7,7 +7,12 @@ import { TeacherManager } from "./TeacherManager";
 import { StudentManager } from "./StudentManager";
 import { OptionManager, type IncidentOptionGroups } from "./OptionManager";
 import { IncidentControls } from "./IncidentControls";
+import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter } from "../ui/Modal";
+import { RoleBanner } from "../layout/RoleBanner";
 import type { ClassRecord, StudentRecord, TeacherRecord } from "./types";
+import styles from "./AdminDashboard.module.css";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -28,6 +33,8 @@ type Props = {
   domain: string;
   impersonatedDomain?: string | null;
   isSuperAdminView?: boolean;
+  role?: "admin" | "superadmin" | "teacher";
+  currentPath?: string;
   initialOrganization?: { name: string | null; domain: string | null } | null;
 };
 
@@ -35,6 +42,8 @@ export function AdminDashboard({
   domain,
   impersonatedDomain,
   isSuperAdminView = false,
+  role = "admin",
+  currentPath,
   initialOrganization = null,
 }: Props) {
   const [classes, setClasses] = useState<ClassRecord[]>([]);
@@ -42,6 +51,8 @@ export function AdminDashboard({
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [cleanupConfirm, setCleanupConfirm] = useState(false);
+  const [cleanupError, setCleanupError] = useState<string | null>(null);
   const [incidentOptions, setIncidentOptions] = useState<IncidentOptionGroups | null>(null);
   const [optionsDomain, setOptionsDomain] = useState<string | null>(null);
   const [savingOptions, setSavingOptions] = useState(false);
@@ -154,16 +165,10 @@ export function AdminDashboard({
     setTimeout(() => setMessage(null), 3200);
   }
 
-  const handleCleanup = useCallback(async () => {
+  const doCleanup = useCallback(async () => {
     if (cleanupRunning) return;
-    if (
-      !window.confirm(
-        "Remove the Bluegum/Koalas sample classes and the S9001-S9010 students from this school?",
-      )
-    ) {
-      return;
-    }
     setCleanupRunning(true);
+    setCleanupConfirm(false);
     try {
       const result = await fetchJson<{
         ok: boolean;
@@ -176,11 +181,16 @@ export function AdminDashboard({
       );
       await Promise.all([loadClasses(), loadTeachers(), loadStudents(selectedClassId)]);
     } catch (err: any) {
-      window.alert(err?.message ?? "Could not remove sample data.");
+      setCleanupError(err?.message ?? "Could not remove sample data.");
     } finally {
       setCleanupRunning(false);
     }
   }, [cleanupRunning, buildUrl, loadClasses, loadTeachers, loadStudents, selectedClassId]);
+
+  const handleCleanup = useCallback(() => {
+    if (cleanupRunning) return;
+    setCleanupConfirm(true);
+  }, [cleanupRunning]);
 
   const effectiveDomain = useMemo(
     () => impersonatedDomain ?? organization?.domain ?? domain,
@@ -189,170 +199,98 @@ export function AdminDashboard({
   const organizationLabel = organization?.name ?? effectiveDomain;
 
   return (
-    <div style={{ display: "grid", gap: "1.5rem", width: "min(1080px, 100%)" }}>
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-          background: "white",
-          borderRadius: "20px",
-          boxShadow: "0 25px 55px -40px rgba(15,23,42,0.35)",
-          padding: "1.25rem 1.5rem",
-        }}
-      >
+    <div className={styles.container}>
+      <RoleBanner
+        role="admin"
+        organizationName={organizationLabel}
+        organizationDomain={organization?.domain}
+        isImpersonating={isSuperAdminView}
+      />
+
+      <header className={styles.header}>
         <div>
-          <h1 style={{ margin: 0, fontSize: "1.75rem", color: "#0f172a" }}>Admin</h1>
-          <p style={{ margin: "0.25rem 0 0", color: "#475569" }}>
-            School: <strong>{organizationLabel}</strong>
-            {organization?.domain ? (
-              <span style={{ color: "#94a3b8", fontWeight: 500 }}>({organization.domain})</span>
-            ) : null}
-            {isSuperAdminView && impersonatedDomain ? (
-              <>
-                {" · managing "}
-                <a href="/super-admin" style={{ color: "#0f766e", fontWeight: 600 }}>Exit to Super Admin console</a>
-              </>
-            ) : null}
-          </p>
+          <h1 className={styles.title}>Admin Dashboard</h1>
           {organization?.lmsProvider && organization.lmsProvider !== "TRACKTALLY" && (
-            <div
-              style={{
-                marginTop: "0.5rem",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.35rem 0.75rem",
-                borderRadius: "8px",
-                background: "#ecfeff",
-                border: "1px solid #06b6d4",
-                fontSize: "0.8rem",
-              }}
-            >
-              <span style={{ fontSize: "1rem" }}>🏫</span>
-              <span style={{ fontWeight: 600, color: "#0e7490" }}>
+            <div className={styles.lmsBadge}>
+              <span className={styles.lmsBadgeIcon}>🏫</span>
+              <span className={styles.lmsBadgeText}>
                 {organization.lmsProvider === "SIMON" ? "SIMON LMS" : organization.lmsProvider}
               </span>
             </div>
           )}
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: 'center', flexWrap: 'wrap' }}>
-          <a
+        <div className={styles.headerActions}>
+          <Button
             href={impersonatedDomain ? `/admin?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin"}
-            style={{
-              border: "1px solid #cbd5f5",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-              color: "#0f172a",
-              background: "#f8fafc",
-              fontWeight: 600,
-            }}
+            variant="outline"
+            size="sm"
+            active={currentPath === "/admin"}
           >
             Admin
-          </a>
-          <a
+          </Button>
+          <Button
             href={impersonatedDomain ? `/admin/analytics?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/analytics"}
-            style={{
-              border: "1px solid #0f766e",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-              color: "#0f766e",
-              background: "#ecfeff",
-              fontWeight: 600,
-            }}
+            variant="secondary"
+            size="sm"
+            active={currentPath === "/admin/analytics"}
           >
             Analytics
-          </a>
+          </Button>
           {organization?.lmsProvider && organization.lmsProvider !== "TRACKTALLY" && (
-            <a
+            <Button
               href={impersonatedDomain ? `/admin/lms-export?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/lms-export"}
-              style={{
-                border: "1px solid #06b6d4",
-                padding: "0.45rem 0.75rem",
-                borderRadius: "10px",
-                textDecoration: "none",
-                color: "#0e7490",
-                background: "#ecfeff",
-                fontWeight: 600,
-              }}
+              variant="secondary"
+              size="sm"
+              active={currentPath === "/admin/lms-export"}
             >
               LMS Export
-            </a>
+            </Button>
           )}
-          <a
+          <Button
             href={impersonatedDomain ? `/admin/incidents?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/incidents"}
-            style={{
-              border: "1px solid #cbd5f5",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-              color: "#0f172a",
-              background: "#f8fafc",
-              fontWeight: 600,
-            }}
+            variant="outline"
+            size="sm"
+            active={currentPath === "/admin/incidents"}
           >
             View incidents
-          </a>
-          <a
+          </Button>
+          <Button
             href="/teacher"
-            style={{
-              border: "1px solid #cbd5f5",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-              color: "#0f172a",
-              background: "#f8fafc",
-              fontWeight: 600,
-            }}
+            variant="outline"
+            size="sm"
           >
             Incident logger
-          </a>
-          <a
-            href="/api/health"
-            style={{
-              border: "1px solid #cbd5f5",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              textDecoration: "none",
-              color: "#0f172a",
-              background: "#f8fafc",
-              fontWeight: 600,
-            }}
-          >
-            Check health
-          </a>
-          <button
-            type="button"
+          </Button>
+          {isSuperAdminView && (
+            <Button
+              href="/super-admin"
+              variant="secondary"
+              size="sm"
+            >
+              Exit to Super Admin
+            </Button>
+          )}
+          {role === "superadmin" && (
+            <Button
+              href="/api/health"
+              variant="ghost"
+              size="sm"
+            >
+              Check health
+            </Button>
+          )}
+          <Button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            style={{
-              border: "1px solid #cbd5f5",
-              padding: "0.45rem 0.75rem",
-              borderRadius: "10px",
-              background: "white",
-              cursor: "pointer",
-              fontWeight: 600,
-            }}
+            variant="outline"
+            size="sm"
           >
             Sign out
-          </button>
+          </Button>
         </div>
       </header>
 
       {message && (
-        <div
-          style={{
-            padding: "0.75rem 1rem",
-            borderRadius: "12px",
-            background: "#ecfeff",
-            border: "1px solid #0f766e",
-            color: "#0f172a",
-            fontWeight: 600,
-          }}
-        >
+        <div className={styles.message}>
           {message}
         </div>
       )}
@@ -462,23 +400,15 @@ export function AdminDashboard({
         }}
       />
 
-      <div style={{ display: "grid", gap: "0.5rem" }}>
+      <div className={styles.optionsSection}>
         {isSuperAdminView && impersonatedDomain && (
-          <div
-            style={{
-              padding: "0.85rem 1rem",
-              borderRadius: "12px",
-              background: "#ecfeff",
-              border: "1px solid #0f766e",
-              color: "#0f172a",
-            }}
-          >
+          <div className={styles.superAdminNotice}>
             Super Admin view · managing {impersonatedDomain}. {" "}
-            <a href="/super-admin" style={{ color: "#0f766e", fontWeight: 600 }}>Exit to Super Admin console</a>
+            <a href="/super-admin">Exit to Super Admin console</a>
           </div>
         )}
         {optionsDomain && (
-          <p style={{ margin: 0, color: "#475569" }}>
+          <p className={styles.optionsDomainText}>
             Customising options for domain <strong>{optionsDomain}</strong>
           </p>
         )}
@@ -499,22 +429,10 @@ export function AdminDashboard({
         />
       </div>
 
-      <section
-        style={{
-          background: "white",
-          borderRadius: "16px",
-          padding: "1rem 1.25rem",
-          boxShadow: "0 20px 40px -32px rgba(15,23,42,0.4)",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "1rem",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ maxWidth: 520 }}>
-          <h3 style={{ margin: 0, color: "#0f172a" }}>Remove sample data</h3>
-          <p style={{ margin: "0.35rem 0 0", color: "#475569", fontSize: "0.95rem" }}>
+      <section className={styles.cleanupSection}>
+        <div className={styles.cleanupInfo}>
+          <h3 className={styles.cleanupTitle}>Remove sample data</h3>
+          <p className={styles.cleanupDescription}>
             Deletes the legacy Bluegum/Koalas classes, S9001-S9010 students, and their incidents from this
             organization. Use this after onboarding to keep rosters clean.
           </p>
@@ -523,17 +441,7 @@ export function AdminDashboard({
           type="button"
           disabled={cleanupRunning}
           onClick={() => void handleCleanup()}
-          style={{
-            padding: "0.65rem 1.2rem",
-            borderRadius: "12px",
-            border: "1px solid #0f766e",
-            background: cleanupRunning ? "#f1f5f9" : "#0f766e",
-            color: cleanupRunning ? "#0f766e" : "#ffffff",
-            fontWeight: 600,
-            cursor: cleanupRunning ? "not-allowed" : "pointer",
-            minWidth: "220px",
-            textAlign: "center",
-          }}
+          className={styles.cleanupButton}
         >
           {cleanupRunning ? "Removing…" : "Remove test classes & students"}
         </button>
@@ -541,9 +449,33 @@ export function AdminDashboard({
 
       <IncidentControls initialRetention={retentionDays} />
 
-      <footer style={{ textAlign: "center", color: "#94a3b8", fontSize: "0.85rem" }}>
+      <footer className={styles.footer}>
         TrackTally admin · Workspace domain: {domain} - ABN 96 110 054 130
       </footer>
+
+      {/* Cleanup Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={cleanupConfirm}
+        onClose={() => setCleanupConfirm(false)}
+        onConfirm={doCleanup}
+        title="Remove sample data?"
+        description="This will remove the Bluegum/Koalas sample classes and the S9001-S9010 students from this school. This action cannot be undone."
+        confirmText="Remove sample data"
+        variant="warning"
+      />
+
+      {/* Cleanup Error Modal */}
+      <Modal isOpen={!!cleanupError} onClose={() => setCleanupError(null)} size="sm">
+        <ModalHeader onClose={() => setCleanupError(null)}>
+          <ModalTitle>Cleanup Failed</ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <p className={styles.errorText}>{cleanupError}</p>
+        </ModalBody>
+        <ModalFooter>
+          <Button onClick={() => setCleanupError(null)}>OK</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
