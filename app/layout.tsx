@@ -1,8 +1,6 @@
 import "./globals.css";
 import { ServiceWorkerRegister } from "../components/ServiceWorkerRegister";
 import { AuthProvider } from "../components/AuthProvider";
-import { SiteFooter } from "../components/SiteFooter";
-import { BrandLogo } from "../components/BrandLogo";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { PwaInstallProvider } from "../components/PwaInstallProvider";
 import type { Metadata } from "next";
@@ -40,42 +38,7 @@ export default function RootLayout({
           <AuthProvider>
             <PwaInstallProvider>
               <ServiceWorkerRegister />
-              <header
-                style={{
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 20,
-                  background: "rgba(255,255,255,0.92)",
-                  backdropFilter: "blur(6px)",
-                  borderBottom: "1px solid #e5e7eb",
-                }}
-              >
-                <div
-                  style={{
-                    maxWidth: 1100,
-                    margin: "0 auto",
-                    padding: "12px 16px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <BrandLogo href="/" />
-                  <nav style={{ display: "flex", gap: 12 }}>
-                    <a href="/teacher" style={{ color: "#0f172a", textDecoration: "none", fontWeight: 600 }}>
-                      Logger
-                    </a>
-                    <a href="/admin" style={{ color: "#0f172a", textDecoration: "none", fontWeight: 600 }}>
-                      Admin
-                    </a>
-                    <a href="/super-admin" style={{ color: "#0f172a", textDecoration: "none", fontWeight: 600 }}>
-                      Super Admin
-                    </a>
-                  </nav>
-                </div>
-              </header>
               {children}
-              <SiteFooter />
             </PwaInstallProvider>
           </AuthProvider>
         </ErrorBoundary>
