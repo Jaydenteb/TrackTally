@@ -40,7 +40,6 @@ export default async function AnalyticsPage({ searchParams }: Props) {
   return (
     <AdminLayoutWrapper
       userName={userName}
-      userRole={isSuperAdmin ? "Super Admin" : "Admin"}
       isSuperAdmin={isSuperAdmin}
       impersonatedDomain={impersonatedDomain}
     >

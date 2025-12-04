@@ -43,7 +43,6 @@ export default async function IncidentsPage({ searchParams }: Props) {
   return (
     <AdminLayoutWrapper
       userName={userName}
-      userRole={isSuperAdmin ? "Super Admin" : "Admin"}
       isSuperAdmin={isSuperAdmin}
       impersonatedDomain={impersonatedDomain}
     >

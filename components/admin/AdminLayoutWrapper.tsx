@@ -8,7 +8,6 @@ import type { SidebarItem } from "../layout/SidebarNav";
 export interface AdminLayoutWrapperProps {
   children: ReactNode;
   userName?: string;
-  userRole?: string;
   isSuperAdmin?: boolean;
   impersonatedDomain?: string | null;
   hasLmsProvider?: boolean;
@@ -17,7 +16,6 @@ export interface AdminLayoutWrapperProps {
 export function AdminLayoutWrapper({
   children,
   userName,
-  userRole,
   isSuperAdmin = false,
   impersonatedDomain,
   hasLmsProvider = false,
@@ -73,7 +71,6 @@ export function AdminLayoutWrapper({
     <AppLayout
       navItems={navItems}
       userName={userName}
-      userRole={userRole}
       onSignOut={() => signOut({ callbackUrl: "/login" })}
     >
       {children}

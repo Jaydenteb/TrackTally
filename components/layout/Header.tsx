@@ -8,7 +8,6 @@ import styles from "./Header.module.css";
 
 export interface HeaderProps {
   userName?: string;
-  userRole?: string;
   navItems?: MobileNavProps["items"];
   onSignOut?: () => void;
   children?: ReactNode;
@@ -16,7 +15,6 @@ export interface HeaderProps {
 
 export function Header({
   userName,
-  userRole,
   navItems = [],
   onSignOut,
   children,
@@ -36,18 +34,6 @@ export function Header({
         {/* Right side actions */}
         <div className={styles.actions}>
           {children}
-
-          {/* Role Badge */}
-          {userRole && (
-            <span
-              className={cn(
-                styles.roleBadge,
-                userRole.toLowerCase().includes("admin") && styles.adminBadge
-              )}
-            >
-              {userRole}
-            </span>
-          )}
 
           {/* Sign Out */}
           {onSignOut && (

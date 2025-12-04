@@ -11,7 +11,6 @@ export interface AppLayoutProps {
   children: ReactNode;
   navItems: SidebarItem[];
   userName?: string;
-  userRole?: string;
   onSignOut?: () => void;
   showSidebar?: boolean;
   showFooter?: boolean;
@@ -22,7 +21,6 @@ export function AppLayout({
   children,
   navItems,
   userName,
-  userRole,
   onSignOut,
   showSidebar = true,
   showFooter = true,
@@ -34,7 +32,6 @@ export function AppLayout({
       <div className={styles.main}>
         <Header
           userName={userName}
-          userRole={userRole}
           navItems={navItems}
           onSignOut={onSignOut}
         >

@@ -44,7 +44,6 @@ export default async function LmsExportPage({ searchParams }: Props) {
   return (
     <AdminLayoutWrapper
       userName={userName}
-      userRole={isSuperAdmin ? "Super Admin" : "Admin"}
       isSuperAdmin={isSuperAdmin}
       impersonatedDomain={impersonatedDomain}
       hasLmsProvider={true}
