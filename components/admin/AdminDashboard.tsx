@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { signOut } from "next-auth/react";
 import { ClassManager } from "./ClassManager";
 import { TeacherManager } from "./TeacherManager";
 import { StudentManager } from "./StudentManager";
@@ -218,74 +217,6 @@ export function AdminDashboard({
               </span>
             </div>
           )}
-        </div>
-        <div className={styles.headerActions}>
-          <Button
-            href={impersonatedDomain ? `/admin?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin"}
-            variant="outline"
-            size="sm"
-            active={currentPath === "/admin"}
-          >
-            Admin
-          </Button>
-          <Button
-            href={impersonatedDomain ? `/admin/analytics?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/analytics"}
-            variant="secondary"
-            size="sm"
-            active={currentPath === "/admin/analytics"}
-          >
-            Analytics
-          </Button>
-          {organization?.lmsProvider && organization.lmsProvider !== "TRACKTALLY" && (
-            <Button
-              href={impersonatedDomain ? `/admin/lms-export?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/lms-export"}
-              variant="secondary"
-              size="sm"
-              active={currentPath === "/admin/lms-export"}
-            >
-              LMS Export
-            </Button>
-          )}
-          <Button
-            href={impersonatedDomain ? `/admin/incidents?impersonate=${encodeURIComponent(impersonatedDomain)}` : "/admin/incidents"}
-            variant="outline"
-            size="sm"
-            active={currentPath === "/admin/incidents"}
-          >
-            View incidents
-          </Button>
-          <Button
-            href="/teacher"
-            variant="outline"
-            size="sm"
-          >
-            Incident logger
-          </Button>
-          {isSuperAdminView && (
-            <Button
-              href="/super-admin"
-              variant="secondary"
-              size="sm"
-            >
-              Exit to Super Admin
-            </Button>
-          )}
-          {role === "superadmin" && (
-            <Button
-              href="/api/health"
-              variant="ghost"
-              size="sm"
-            >
-              Check health
-            </Button>
-          )}
-          <Button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            variant="outline"
-            size="sm"
-          >
-            Sign out
-          </Button>
         </div>
       </header>
 

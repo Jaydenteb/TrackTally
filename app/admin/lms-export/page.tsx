@@ -1,12 +1,31 @@
 import { redirect } from "next/navigation";
 import { auth } from "../../../auth";
 import { LmsExportView } from "../../../components/admin/LmsExportView";
+import { AdminLayoutWrapper } from "../../../components/admin/AdminLayoutWrapper";
+
+type Props = {
+  searchParams?: {
+    impersonate?: string;
+  };
+};
+
+function sanitizeDomain(value?: string | null) {
+  if (!value) return null;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+    return url.hostname.toLowerCase();
+  } catch {
+    return trimmed.replace(/^https?:\/\//, "").split("/")[0];
+  }
+}
 
 export const metadata = {
   title: "LMS Export - TrackTally",
 };
 
-export default async function LmsExportPage() {
+export default async function LmsExportPage({ searchParams }: Props) {
   const session = await auth();
 
   if (!session) {
@@ -17,17 +36,20 @@ export default async function LmsExportPage() {
     redirect("/");
   }
 
+  const impersonatedDomain =
+    session.user?.role === "superadmin" ? sanitizeDomain(searchParams?.impersonate) : null;
+  const isSuperAdmin = session.user?.role === "superadmin";
+  const userName = session.user?.name ?? session.user?.email ?? "Admin";
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #f8fafc 0%, #e0f2fe 100%)",
-        padding: "2rem 1rem",
-        display: "flex",
-        justifyContent: "center",
-      }}
+    <AdminLayoutWrapper
+      userName={userName}
+      userRole={isSuperAdmin ? "Super Admin" : "Admin"}
+      isSuperAdmin={isSuperAdmin}
+      impersonatedDomain={impersonatedDomain}
+      hasLmsProvider={true}
     >
       <LmsExportView />
-    </main>
+    </AdminLayoutWrapper>
   );
 }

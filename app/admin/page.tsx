@@ -1,6 +1,7 @@
 import { auth } from "../../auth";
 import { redirect } from "next/navigation";
 import { AdminDashboard } from "../../components/admin/AdminDashboard";
+import { AdminLayoutWrapper } from "../../components/admin/AdminLayoutWrapper";
 
 type Props = {
   searchParams?: {
@@ -36,21 +37,20 @@ export default async function AdminPage({ searchParams }: Props) {
     session.user?.role === "superadmin" ? sanitizeDomain(searchParams?.impersonate) : null;
   const organizationName = session.user?.organizationName ?? null;
   const organizationDomain = session.user?.organizationDomain ?? allowedDomain;
+  const isSuperAdmin = session.user?.role === "superadmin";
+  const userName = session.user?.name ?? session.user?.email ?? "Admin";
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background: "#f1f5f9",
-        padding: "2.5rem 1.5rem 3rem",
-        display: "flex",
-        justifyContent: "center",
-      }}
+    <AdminLayoutWrapper
+      userName={userName}
+      userRole={isSuperAdmin ? "Super Admin" : "Admin"}
+      isSuperAdmin={isSuperAdmin}
+      impersonatedDomain={impersonatedDomain}
     >
       <AdminDashboard
         domain={organizationDomain}
         impersonatedDomain={impersonatedDomain}
-        isSuperAdminView={session.user?.role === "superadmin"}
+        isSuperAdminView={isSuperAdmin}
         role={session.user?.role ?? "admin"}
         currentPath="/admin"
         initialOrganization={{
@@ -58,6 +58,6 @@ export default async function AdminPage({ searchParams }: Props) {
           domain: impersonatedDomain ?? organizationDomain,
         }}
       />
-    </main>
+    </AdminLayoutWrapper>
   );
 }
