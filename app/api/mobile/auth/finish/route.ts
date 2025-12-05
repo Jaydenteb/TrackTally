@@ -42,7 +42,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Session not found." }, { status: 401 });
   }
 
-  const cookieValue = cookies().get(sessionTokenCookieName)?.value;
+  const cookieStore = await cookies();
+  const cookieValue = cookieStore.get(sessionTokenCookieName)?.value;
   if (!cookieValue) {
     return NextResponse.json({ error: "Missing session token." }, { status: 401 });
   }

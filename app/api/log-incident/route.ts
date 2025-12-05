@@ -117,7 +117,7 @@ export async function POST(request: Request) {
     return buildError("No organization assigned to this account.", 403);
   }
 
-  const headerStore = headers();
+  const headerStore = await headers();
   const userAgent = headerStore.get("user-agent") ?? "";
   const ip =
     headerStore
