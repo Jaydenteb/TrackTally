@@ -3,14 +3,15 @@ import { requireSuperAdmin } from "../../../../../lib/admin-auth";
 import { normalizeOptions, updateOrganization, deleteOrganization } from "../../../../../lib/organizations";
 
 type Params = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function PATCH(request: Request, { params }: Params) {
   const { error, rateHeaders } = await requireSuperAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   let body: unknown;
   try {
@@ -26,7 +27,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const { name, domain, active, lmsProvider, options } = body as Record<string, unknown>;
 
   try {
-    const updated = await updateOrganization(params.id, {
+    const updated = await updateOrganization(id, {
       name: typeof name === "string" ? name.trim() : undefined,
       domain: typeof domain === "string" ? domain.trim().toLowerCase() : undefined,
       active: typeof active === "boolean" ? active : undefined,
@@ -51,9 +52,10 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
   const { error, rateHeaders } = await requireSuperAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   try {
-    await deleteOrganization(params.id);
+    await deleteOrganization(id);
     const response = NextResponse.json({ ok: true });
     if (rateHeaders) {
       Object.entries(rateHeaders).forEach(([key, value]) => response.headers.set(key, value));
