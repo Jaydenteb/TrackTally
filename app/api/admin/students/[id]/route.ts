@@ -6,7 +6,7 @@ import { sanitizeOptional, studentUpdateSchema } from "../../../../../lib/valida
 import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
 import { createAuditLog, AuditActions } from "../../../../../lib/audit";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -21,6 +21,7 @@ async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId
 export async function PATCH(request: Request, { params }: Params) {
   const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   let targetOrgId: string;
   try {
@@ -30,7 +31,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const studentRecord = await prisma.student.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { organizationId: true },
   });
   if (!studentRecord || studentRecord.organizationId !== targetOrgId) {
@@ -126,7 +127,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   try {
     const student = await prisma.student.update({
-      where: { id: params.id },
+      where: { id },
       data: updates,
     });
 
@@ -159,6 +160,7 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
   const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   let targetOrgId: string;
   try {
@@ -169,7 +171,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   try {
     const updated = await prisma.student.updateMany({
-      where: { id: params.id, organizationId: targetOrgId },
+      where: { id, organizationId: targetOrgId },
       data: { active: false },
     });
     if (updated.count === 0) {

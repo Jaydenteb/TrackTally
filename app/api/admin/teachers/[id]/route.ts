@@ -5,7 +5,7 @@ import { requireAdmin } from "../../../../../lib/admin-auth";
 import { sanitizeOptional, teacherUpdateSchema } from "../../../../../lib/validation";
 import { resolveOrganizationIdForRequest } from "../../../../../lib/organizations";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -20,6 +20,7 @@ async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId
 export async function PATCH(request: Request, { params }: Params) {
   const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   let targetOrgId: string;
   try {
@@ -29,7 +30,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const teacherRecord = await prisma.teacher.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { organizationId: true },
   });
 
@@ -82,7 +83,7 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     const updated = await prisma.$transaction(async (tx) => {
       const teacher = await tx.teacher.update({
-        where: { id: params.id },
+        where: { id },
         data: updates,
       });
 
@@ -94,11 +95,11 @@ export async function PATCH(request: Request, { params }: Params) {
         if (classrooms.length !== classroomIds.length) {
           throw new Error("Invalid classroom selection.");
         }
-        await tx.teacherClass.deleteMany({ where: { teacherId: params.id } });
+        await tx.teacherClass.deleteMany({ where: { teacherId: id } });
         if (classroomIds.length > 0) {
           await tx.teacherClass.createMany({
             data: classroomIds.map((classroomId) => ({
-              teacherId: params.id,
+              teacherId: id,
               classroomId,
             })),
           });
@@ -128,6 +129,7 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(request: Request, { params }: Params) {
   const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   let targetOrgId: string;
   try {
@@ -138,7 +140,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   try {
     const updated = await prisma.teacher.updateMany({
-      where: { id: params.id, organizationId: targetOrgId },
+      where: { id, organizationId: targetOrgId },
       data: { active: false },
     });
     if (updated.count === 0) {

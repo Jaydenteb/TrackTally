@@ -5,7 +5,7 @@ import { requireAdmin } from "../../../../../../lib/admin-auth";
 import { classroomSpecialistSchema } from "../../../../../../lib/validation";
 import { resolveOrganizationIdForRequest } from "../../../../../../lib/organizations";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId: string | null) {
   const url = new URL(request.url);
@@ -20,6 +20,7 @@ async function getOrgIdFromRequest(request: Request, session: Session, baseOrgId
 export async function POST(request: Request, { params }: Params) {
   const { error, rateHeaders, organizationId, session } = await requireAdmin(request);
   if (error) return error;
+  const { id } = await params;
 
   let targetOrgId: string;
   try {
@@ -29,7 +30,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const classroomRecord = await prisma.classroom.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { organizationId: true },
   });
   if (!classroomRecord || classroomRecord.organizationId !== targetOrgId) {
@@ -65,13 +66,13 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
-    await prisma.teacherClass.deleteMany({ where: { classroomId: params.id } });
+    await prisma.teacherClass.deleteMany({ where: { classroomId: id } });
 
     if (teacherIds.length > 0) {
       await prisma.teacherClass.createMany({
         data: teacherIds.map((teacherId) => ({
           teacherId,
-          classroomId: params.id,
+          classroomId: id,
         })),
       });
     }
