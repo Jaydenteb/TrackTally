@@ -6,9 +6,9 @@ import { subDays, startOfDay, endOfDay } from "date-fns";
 export const runtime = "nodejs";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function GET(request: Request, context: RouteContext) {
@@ -16,7 +16,7 @@ export async function GET(request: Request, context: RouteContext) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { organizationId } = authResult;
-  const studentId = context.params.id;
+  const { id: studentId } = await context.params;
   const { searchParams } = new URL(request.url);
 
   // Parse query params
