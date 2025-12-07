@@ -23,13 +23,13 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
       : " Access is limited to approved domains.";
     switch (error) {
       case "AccessDenied":
-        return `Your Google account isn't allowed.${domainMsg}`;
+        return `Your account isn't allowed.${domainMsg}`;
       case "OAuthSignin":
       case "OAuthCallback":
       case "OAuthCreateAccount":
       case "OAuthAccountNotLinked":
       case "CallbackRouteError":
-        return "Google sign-in failed. Please try again.";
+        return "Sign-in failed. Please try again.";
       case "Configuration":
         return "Authentication is not fully configured. Please try again later.";
       default:
@@ -38,7 +38,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
   }, [error, allowedDomain]);
 
   const handleSignIn = () => {
-    void signIn("google", { callbackUrl });
+    void signIn("tebtally", { callbackUrl });
   };
 
   if (!authConfigured) {
@@ -63,7 +63,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
             ))}
           </ul>
           <p className={styles.subtitle}>
-            After configuring Google OAuth, revisit this page to sign in.
+            After configuring authentication, revisit this page to sign in.
           </p>
         </section>
       </main>
@@ -76,7 +76,7 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
         <header>
           <h1 className={styles.title}>Sign in to TrackTally™</h1>
           <p className={styles.subtitle}>
-            Use your school Google Workspace account to continue.
+            Sign in with your TebTally account to continue.
             {allowedDomain ? (
               <> Only staff from <strong>{allowedDomain}</strong> can access.</>
             ) : (
@@ -89,15 +89,9 @@ export function LoginForm({ authConfigured, missingEnv, allowedDomain }: Props) 
             {errorMessage}
           </div>
         )}
-        <button type="button" className={styles.button} onClick={handleSignIn} aria-label="Continue with Google">
+        <button type="button" className={styles.button} onClick={handleSignIn} aria-label="Continue with TebTally">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-            <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#FFC107" d="M43.61 20.083h-1.982V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.156 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.651-.39-3.917z"/>
-              <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.542 16.25 18.851 14 24 14c3.059 0 5.842 1.156 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.734 8.337 6.306 14.691z"/>
-              <path fill="#4CAF50" d="M24 44c5.176 0 9.899-1.986 13.463-5.221l-6.204-5.238C29.132 35.884 26.68 37 24 37c-5.202 0-9.62-3.315-11.273-7.945l-6.522 5.022C9.577 39.556 16.308 44 24 44z"/>
-              <path fill="#1976D2" d="M43.61 20.083H24v8h11.303a12.01 12.01 0 0 1-4.044 5.458l6.204 5.238C39.084 36.48 44 31.333 44 24c0-1.341-.138-2.651-.39-3.917z"/>
-            </svg>
-            <span>Continue with Google</span>
+            <span>Continue with TebTally</span>
           </span>
         </button>
         <p className={styles.subtitle}>
