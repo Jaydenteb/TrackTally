@@ -1,11 +1,10 @@
 import NextAuth from "next-auth";
-import Google from "next-auth/providers/google";
 import { prisma } from "./lib/prisma";
 import { getOrganizationByDomain } from "./lib/organizations";
 
 const domain = process.env.ALLOWED_GOOGLE_DOMAIN;
 const normalizedDomain = domain?.toLowerCase();
-const requiredKeys = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_SECRET"] as const;
+const requiredKeys = ["NEXTAUTH_SECRET"] as const;
 export const sessionTokenCookieName =
   process.env.NODE_ENV === "production"
     ? "__Secure-tracktally.session-token"
@@ -116,10 +115,15 @@ let signOutFn: NextAuthReturn["signOut"];
 if (authConfigured) {
   const nextAuth = NextAuth({
     providers: [
-      Google({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      }),
+      {
+        id: "tebtally",
+        name: "TebTally",
+        type: "oidc",
+        issuer: process.env.TEBTALLY_ISSUER || "https://id.tebtally.com",
+        clientId: process.env.TEBTALLY_CLIENT_ID!,
+        clientSecret: process.env.TEBTALLY_CLIENT_SECRET!,
+        allowDangerousEmailAccountLinking: true,
+      },
     ],
     secret: process.env.NEXTAUTH_SECRET!,
     session: {
