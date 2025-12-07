@@ -34,6 +34,27 @@ export const authConfig: NextAuthConfig = {
       },
     },
   },
+  callbacks: {
+    // Edge-compatible session callback - reads role from JWT token
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.role =
+          token.role === "superadmin" || token.role === "admin" || token.role === "teacher"
+            ? (token.role as any)
+            : "teacher";
+        if (token.name) {
+          session.user.name = token.name as string;
+        }
+        session.user.organizationId =
+          typeof token.organizationId === "string" ? token.organizationId : null;
+        session.user.organizationName =
+          typeof token.organizationName === "string" ? token.organizationName : null;
+        session.user.organizationDomain =
+          typeof token.organizationDomain === "string" ? token.organizationDomain : null;
+      }
+      return session;
+    },
+  },
   pages: {
     signIn: "/login",
   },

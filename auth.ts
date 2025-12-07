@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import { prisma } from "./lib/prisma";
 import { getOrganizationByDomain } from "./lib/organizations";
-import { sessionTokenCookieName } from "./auth.config";
+import { authConfig, sessionTokenCookieName } from "./auth.config";
 
 const domain = process.env.ALLOWED_GOOGLE_DOMAIN;
 const normalizedDomain = domain?.toLowerCase();
@@ -115,6 +115,7 @@ let signOutFn: NextAuthReturn["signOut"];
 
 if (authConfigured) {
   const nextAuth = NextAuth({
+    ...authConfig,
     providers: [
       {
         id: "tebtally",
@@ -126,21 +127,6 @@ if (authConfigured) {
         allowDangerousEmailAccountLinking: true,
       },
     ],
-    secret: process.env.NEXTAUTH_SECRET!,
-    session: {
-      strategy: "jwt",
-    },
-    cookies: {
-      sessionToken: {
-        name: sessionTokenCookieName,
-        options: {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-          secure: process.env.NODE_ENV === "production",
-        },
-      },
-    },
     callbacks: {
       async signIn({ profile }) {
         const email = profile?.email?.toLowerCase();
@@ -265,9 +251,6 @@ if (authConfigured) {
         }
         return session;
       },
-    },
-    pages: {
-      signIn: "/login",
     },
   });
 
