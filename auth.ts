@@ -1,14 +1,13 @@
 import NextAuth from "next-auth";
 import { prisma } from "./lib/prisma";
 import { getOrganizationByDomain } from "./lib/organizations";
+import { sessionTokenCookieName } from "./auth.config";
 
 const domain = process.env.ALLOWED_GOOGLE_DOMAIN;
 const normalizedDomain = domain?.toLowerCase();
 const requiredKeys = ["NEXTAUTH_SECRET"] as const;
-export const sessionTokenCookieName =
-  process.env.NODE_ENV === "production"
-    ? "__Secure-tracktally.session-token"
-    : "tracktally.session-token";
+
+export { sessionTokenCookieName };
 
 const bootstrapAdmins = new Set(
   (process.env.ADMIN_EMAILS ?? "")

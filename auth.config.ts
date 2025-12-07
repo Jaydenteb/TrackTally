@@ -2,6 +2,12 @@ import type { NextAuthConfig } from "next-auth";
 
 // Lightweight auth config for middleware (edge runtime compatible)
 // Does NOT include callbacks that require Prisma
+
+export const sessionTokenCookieName =
+  process.env.NODE_ENV === "production"
+    ? "__Secure-tracktally.session-token"
+    : "tracktally.session-token";
+
 export const authConfig: NextAuthConfig = {
   providers: [
     {
@@ -16,6 +22,17 @@ export const authConfig: NextAuthConfig = {
   secret: process.env.NEXTAUTH_SECRET!,
   session: {
     strategy: "jwt",
+  },
+  cookies: {
+    sessionToken: {
+      name: sessionTokenCookieName,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   pages: {
     signIn: "/login",
