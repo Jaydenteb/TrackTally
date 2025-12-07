@@ -38,7 +38,9 @@ function isAllowedDomain(email?: string | null, hostedDomain?: string | null) {
   if (!normalizedDomain) return false;
   if (!email) return false;
   const emailAllowed = email.toLowerCase().endsWith(`@${normalizedDomain}`);
-  const hdAllowed = hostedDomain ? hostedDomain.toLowerCase() === normalizedDomain : false;
+  // For TebTally OIDC, we trust the email domain since TebTally handles authentication
+  // The hd claim is only available from Google OAuth, not TebTally OIDC
+  const hdAllowed = hostedDomain ? hostedDomain.toLowerCase() === normalizedDomain : true;
   return emailAllowed && hdAllowed;
 }
 
