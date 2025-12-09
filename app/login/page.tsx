@@ -68,8 +68,6 @@ export default async function LoginPage({
 
   const callbackUrl = params.callbackUrl || "/teacher";
 
-  // Auto-trigger OIDC signin - redirect to TebTally Identity Provider
-  await signIn("tebtally", { redirectTo: callbackUrl });
-
-  return null;
+  // Redirect to NextAuth signin endpoint - can't call signIn() directly in Server Component
+  redirect(`/api/auth/signin/tebtally?callbackUrl=${encodeURIComponent(callbackUrl)}`);
 }
