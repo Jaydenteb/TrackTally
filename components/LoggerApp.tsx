@@ -423,8 +423,8 @@ export function LoggerApp({
     focusable?.focus();
   }, [currentStep]);
 
-  const handleSignIn = () => void signIn("google", { callbackUrl: "/" });
-  const handleSignOut = () => void signOut({ callbackUrl: "/login" });
+  const handleSignIn = () => void signIn("tebtally", { callbackUrl: "/" });
+  const handleSignOut = () => void signOut({ callbackUrl: "/" });
 
   // Render step content
   const renderStepContent = (): JSX.Element => {

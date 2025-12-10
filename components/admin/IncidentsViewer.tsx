@@ -366,7 +366,7 @@ export function IncidentsViewer({
             Logger
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ callbackUrl: "/" })}
             style={{
               padding: "0.5rem 1rem",
               background: "#f1f5f9",

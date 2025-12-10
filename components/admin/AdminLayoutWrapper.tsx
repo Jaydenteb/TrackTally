@@ -71,7 +71,7 @@ export function AdminLayoutWrapper({
     <AppLayout
       navItems={navItems}
       userName={userName}
-      onSignOut={() => signOut({ callbackUrl: "/login" })}
+      onSignOut={() => signOut({ callbackUrl: "/" })}
     >
       {children}
     </AppLayout>

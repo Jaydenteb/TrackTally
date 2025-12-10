@@ -127,7 +127,7 @@ Find the `<header>` section (around line 198-343) and replace with:
     </Button>
 
     <Button
-      onClick={() => signOut({ callbackUrl: "/login" })}
+      onClick={() => signOut({ callbackUrl: "/" })}
       variant="outline"
       size="sm"
     >

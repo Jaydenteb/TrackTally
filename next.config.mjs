@@ -35,7 +35,7 @@ function createSecurityHeaders() {
         "style-src 'self' 'unsafe-inline'",
         "font-src 'self' data:",
         `script-src ${scriptSrc.join(" ")}`,
-        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com",
+        "connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://id.tebtally.com",
         "frame-ancestors 'none'",
         "form-action 'self'",
       ].join("; "),

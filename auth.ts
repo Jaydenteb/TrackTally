@@ -125,6 +125,8 @@ if (authConfigured) {
         clientId: process.env.TEBTALLY_CLIENT_ID!,
         clientSecret: process.env.TEBTALLY_CLIENT_SECRET!,
         allowDangerousEmailAccountLinking: true,
+        authorization: { params: { scope: "openid email profile" } },
+        userinfo: true,
       },
     ],
     callbacks: {
