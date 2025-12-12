@@ -124,7 +124,7 @@ if (authConfigured) {
         issuer: process.env.TEBTALLY_ISSUER || "https://id.tebtally.com",
         clientId: process.env.TEBTALLY_CLIENT_ID!,
         clientSecret: process.env.TEBTALLY_CLIENT_SECRET!,
-        allowDangerousEmailAccountLinking: true,
+        allowDangerousEmailAccountLinking: false, // SECURITY: Disabled to prevent account takeover via email hijacking
         authorization: { params: { scope: "openid email profile" } },
         userinfo: true,
       },
